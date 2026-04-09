@@ -56,3 +56,20 @@ async def test_plugins_endpoint_lists_loaded():
         names = [p["name"] for p in body["plugins"]]
         assert "yardsailing" in names
         assert "small-talk" in names
+
+
+async def test_plugin_bundle_endpoint_returns_404_for_missing():
+    app = _build_app(MockProvider([LLMResponse(text="x", tool_calls=[])]))
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        response = await c.get("/api/plugins/nonexistent/bundle")
+        assert response.status_code == 404
+
+
+async def test_plugin_bundle_endpoint_returns_404_when_no_components():
+    """small-talk has no components declared, so its bundle endpoint 404s."""
+    app = _build_app(MockProvider([LLMResponse(text="x", tool_calls=[])]))
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        response = await c.get("/api/plugins/small-talk/bundle")
+        assert response.status_code == 404

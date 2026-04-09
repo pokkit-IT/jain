@@ -438,7 +438,7 @@ React, React Native, and core libs are treated as externals. Bundles contain onl
 - [ ] User taps Map tab → sees same pins on full-screen map
 - [ ] User says "I want to create a yard sale" → Jain gathers info conversationally OR renders `SaleForm` from the yardsailing plugin bundle → submission creates a real sale in yardsailing's DB
 - [ ] Settings screen shows configured LLM provider (read-only)
-- [ ] JAIN backend can be reconfigured to a different LLM provider via config (even though only Anthropic is implemented)
+- [ ] LLM provider abstraction is in place: `LLMProvider` interface defined, `AnthropicProvider` implemented, config reads `LLM_PROVIDER` env var. Adding a second provider in Phase 2 requires zero changes to `chat_service.py`, `tool_executor.py`, or `context_builder.py` — only a new file under `engine/`.
 - [ ] Yardsailing backend is unchanged — no code edits in that repo
 
 ## Phase 1 Deployment

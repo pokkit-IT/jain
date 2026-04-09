@@ -109,3 +109,42 @@ async def test_chat_service_respects_max_tool_rounds(registry, httpx_mock):
     )
     assert "max tool rounds" in reply.text.lower() or reply.text == ""
     assert len(provider.calls) <= 4  # initial + max_tool_rounds
+
+
+async def test_chat_service_tool_error_does_not_set_data(registry, httpx_mock):
+    httpx_mock.add_response(
+        method="GET",
+        url="https://api.yardsailing.sale/api/sales?lat=1.0&lng=2.0&radius_miles=10",
+        status_code=500,
+        json={"detail": "upstream boom"},
+    )
+
+    provider = MockProvider(
+        responses=[
+            LLMResponse(
+                text="",
+                tool_calls=[
+                    ToolCall(
+                        id="tc1",
+                        name="find_yard_sales",
+                        arguments={"lat": 1.0, "lng": 2.0, "radius_miles": 10},
+                    )
+                ],
+            ),
+            LLMResponse(text="Something went wrong searching", tool_calls=[]),
+        ]
+    )
+    service = ChatService(
+        registry=registry,
+        provider=provider,
+        tool_executor=ToolExecutor(registry=registry),
+    )
+
+    reply = await service.send(
+        conversation=[ChatMessage(role="user", content="find sales")],
+    )
+    assert reply.text == "Something went wrong searching"
+    assert reply.data is None
+    assert reply.display_hint is None
+    assert len(reply.tool_events) == 1
+    assert reply.tool_events[0]["name"] == "find_yard_sales"

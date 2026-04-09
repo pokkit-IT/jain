@@ -48,6 +48,23 @@ class ChatService:
         self.max_tool_rounds = max_tool_rounds
 
     async def send(self, conversation: list[ChatMessage]) -> ChatReply:
+        """Run the LLM + tool loop and return the final assistant reply.
+
+        The loop runs up to `max_tool_rounds + 1` LLM calls total. The extra
+        round is intended to give the LLM a final turn to generate a text
+        reply after its last tool execution. If the LLM returns tool_calls
+        on that final round, those tools run but their results are discarded
+        (the reply text becomes "(max tool rounds reached)"). This is a
+        safety bound against pathological tool-use loops.
+
+        Args:
+            conversation: Full chat history so far, ending with the user's
+                          latest message.
+
+        Returns:
+            ChatReply containing the final text, most recent tool data (if
+            any), a display hint, and a log of tool events.
+        """
         system = build_system_prompt(self.registry)
         tools = self.registry.all_tools()
         history = list(conversation)
@@ -92,15 +109,14 @@ class ChatService:
                 except (json.JSONDecodeError, TypeError):
                     parsed = None
 
-                if parsed is not None and not (
-                    isinstance(parsed, dict) and parsed.get("error")
-                ):
-                    last_data = parsed
+                is_error = isinstance(parsed, dict) and parsed.get("error")
+                if parsed is not None and not is_error:
                     plugin, _ = self.registry.find_tool(call.name)
                     plugin_name = plugin.manifest.name if plugin else ""
-                    hint = _infer_display_hint(plugin_name, call.name, parsed)
-                    if hint:
-                        last_display_hint = hint
+                    # Update data and hint atomically so a stale "map" hint
+                    # never outlives its original sales-shaped data.
+                    last_data = parsed
+                    last_display_hint = _infer_display_hint(plugin_name, call.name, parsed)
 
             history.append(ChatMessage(role="tool", content="", tool_results=results))
 

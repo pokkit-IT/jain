@@ -1,0 +1,6 @@
+{
+  "name": "small-talk",
+  "version": "1.0.0",
+  "description": "Casual conversation personality",
+  "skills": [{ "name": "chat", "description": "General chat" }]
+}

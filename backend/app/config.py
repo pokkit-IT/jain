@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str = ""
     ANTHROPIC_API_KEY: str = ""
 
+    # Google OAuth (sub-project A)
+    GOOGLE_CLIENT_ID: str = ""
+
+    # JAIN JWT signing (sub-project A)
+    JWT_SECRET: str = "change-me-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_DAYS: int = 30
+
     # Database
     DATABASE_URL: str = f"sqlite+aiosqlite:///{_BACKEND_DIR}/jain.db"
 

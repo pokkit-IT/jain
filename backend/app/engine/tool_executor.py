@@ -41,11 +41,20 @@ class ToolExecutor:
         base_url = plugin.manifest.api.base_url.rstrip("/")
         endpoint = tool.endpoint or f"/{tool.name}"
         url = base_url + endpoint
+        method = (tool.method or "GET").upper()
 
         client = await self._get_http()
         try:
-            # Default to GET with query params. Tools can override via their endpoint.
-            response = await client.get(url, params=call.arguments)
+            if method == "GET":
+                response = await client.get(url, params=call.arguments)
+            else:
+                # Mutating methods send arguments as JSON body. The
+                # X-Requested-With header satisfies CSRF middleware on
+                # APIs that require it (e.g. yardsailing).
+                headers = {"X-Requested-With": "XMLHttpRequest"}
+                response = await client.request(
+                    method, url, json=call.arguments, headers=headers
+                )
             response.raise_for_status()
             return ToolResult(tool_call_id=call.id, content=response.text)
         except httpx.HTTPStatusError as e:

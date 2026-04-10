@@ -15,6 +15,8 @@ class ToolDef(BaseModel):
     input_schema: ToolInputSchema
     # Optional: endpoint path on the plugin's api.base_url. Defaults to /{tool.name}.
     endpoint: str = ""
+    # HTTP method. Defaults to GET. Use POST/PUT/DELETE for write operations.
+    method: str = "GET"
 
 
 class SkillDef(BaseModel):

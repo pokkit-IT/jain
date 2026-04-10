@@ -4,6 +4,7 @@ from typing import Any
 
 from app.engine.base import ChatMessage, LLMProvider, ToolResult
 from app.engine.tool_executor import ToolExecutor
+from app.models.user import User
 from app.plugins.registry import PluginRegistry
 
 from .context_builder import build_system_prompt
@@ -47,7 +48,11 @@ class ChatService:
         self.tool_executor = tool_executor
         self.max_tool_rounds = max_tool_rounds
 
-    async def send(self, conversation: list[ChatMessage]) -> ChatReply:
+    async def send(
+        self,
+        conversation: list[ChatMessage],
+        user: User | None = None,
+    ) -> ChatReply:
         """Run the LLM + tool loop and return the final assistant reply.
 
         The loop runs up to `max_tool_rounds + 1` LLM calls total. The extra
@@ -57,15 +62,22 @@ class ChatService:
         (the reply text becomes "(max tool rounds reached)"). This is a
         safety bound against pathological tool-use loops.
 
+        Phase 2B: if any tool execution returns a synthetic auth_required
+        error, the loop short-circuits immediately and returns a ChatReply
+        with display_hint="auth_required" so the mobile app can render an
+        inline login prompt.
+
         Args:
             conversation: Full chat history so far, ending with the user's
                           latest message.
+            user: The authenticated User if the caller provided a valid
+                  JAIN JWT, or None for anonymous requests.
 
         Returns:
             ChatReply containing the final text, most recent tool data (if
             any), a display hint, and a log of tool events.
         """
-        system = build_system_prompt(self.registry)
+        system = build_system_prompt(self.registry, user=user)
         tools = self.registry.all_tools()
         history = list(conversation)
 
@@ -97,17 +109,31 @@ class ChatService:
 
             results: list[ToolResult] = []
             for call in response.tool_calls:
-                result = await self.tool_executor.execute(call)
+                result = await self.tool_executor.execute(call, user=user)
                 results.append(result)
 
                 event = {"name": call.name, "arguments": call.arguments}
                 tool_events.append(event)
 
-                # Try to parse result content as JSON for data/display_hint
+                # Try to parse result content as JSON
                 try:
                     parsed = json.loads(result.content)
                 except (json.JSONDecodeError, TypeError):
                     parsed = None
+
+                # Phase 2B: short-circuit on auth_required synthetic error.
+                # The LLM's in-progress response is discarded; the user sees
+                # only a short "sign in first" message + inline login prompt.
+                if (
+                    isinstance(parsed, dict)
+                    and parsed.get("error") == "auth_required"
+                ):
+                    return ChatReply(
+                        text="I'd love to help with that — you'll need to sign in first.",
+                        data={"plugin": parsed.get("plugin", "")},
+                        display_hint="auth_required",
+                        tool_events=tool_events,
+                    )
 
                 is_error = isinstance(parsed, dict) and parsed.get("error")
                 if parsed is not None and not is_error:

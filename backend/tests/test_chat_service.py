@@ -31,6 +31,7 @@ async def test_chat_service_text_reply(registry):
 
     reply = await service.send(
         conversation=[ChatMessage(role="user", content="hi")],
+        user=None,
     )
     assert reply.text == "Hello human"
     assert reply.data is None
@@ -68,6 +69,7 @@ async def test_chat_service_executes_tool_and_continues(registry, httpx_mock):
 
     reply = await service.send(
         conversation=[ChatMessage(role="user", content="find sales")],
+        user=None,
     )
     assert reply.text == "Found 1 sale nearby"
     assert reply.data is not None
@@ -106,6 +108,7 @@ async def test_chat_service_respects_max_tool_rounds(registry, httpx_mock):
 
     reply = await service.send(
         conversation=[ChatMessage(role="user", content="find sales")],
+        user=None,
     )
     assert "max tool rounds" in reply.text.lower() or reply.text == ""
     assert len(provider.calls) <= 4  # initial + max_tool_rounds
@@ -142,9 +145,154 @@ async def test_chat_service_tool_error_does_not_set_data(registry, httpx_mock):
 
     reply = await service.send(
         conversation=[ChatMessage(role="user", content="find sales")],
+        user=None,
     )
     assert reply.text == "Something went wrong searching"
     assert reply.data is None
     assert reply.display_hint is None
     assert len(reply.tool_events) == 1
     assert reply.tool_events[0]["name"] == "find_yard_sales"
+
+
+async def test_chat_service_passes_user_to_tool_executor(registry, httpx_mock):
+    """When a User is passed to send(), the tool executor receives it."""
+    from uuid import uuid4
+
+    from app.config import settings
+    from app.models.user import User
+
+    original_key = settings.JAIN_SERVICE_KEY
+    settings.JAIN_SERVICE_KEY = "test-key-for-chat-service"
+
+    try:
+        httpx_mock.add_response(
+            method="GET",
+            url="https://api.yardsailing.sale/api/sales?lat=1.0&lng=2.0&radius_miles=10",
+            json={"sales": []},
+        )
+
+        provider = MockProvider(
+            responses=[
+                LLMResponse(
+                    text="",
+                    tool_calls=[
+                        ToolCall(
+                            id="tc1",
+                            name="find_yard_sales",
+                            arguments={"lat": 1.0, "lng": 2.0, "radius_miles": 10},
+                        )
+                    ],
+                ),
+                LLMResponse(text="found nothing", tool_calls=[]),
+            ]
+        )
+        service = ChatService(
+            registry=registry,
+            provider=provider,
+            tool_executor=ToolExecutor(registry=registry),
+        )
+
+        user = User(
+            id=uuid4(),
+            email="jim@example.com",
+            name="Jim",
+            email_verified=True,
+            google_sub="g-jim-chat",
+        )
+        await service.send(
+            conversation=[ChatMessage(role="user", content="find sales")],
+            user=user,
+        )
+
+        sent = httpx_mock.get_requests()[0]
+        assert sent.headers["x-jain-user-email"] == "jim@example.com"
+    finally:
+        settings.JAIN_SERVICE_KEY = original_key
+
+
+async def test_chat_service_short_circuits_on_auth_required(registry):
+    """When a tool returns auth_required error, chat service returns a
+    ChatReply with display_hint='auth_required' and does NOT feed the
+    error back to the LLM for a continuation."""
+    # Mark the find_yard_sales tool as auth_required for this test
+    _, tool = registry.find_tool("find_yard_sales")
+    tool.auth_required = True
+
+    try:
+        provider = MockProvider(
+            responses=[
+                LLMResponse(
+                    text="Let me search",
+                    tool_calls=[
+                        ToolCall(
+                            id="tc1",
+                            name="find_yard_sales",
+                            arguments={"lat": 1.0, "lng": 2.0},
+                        )
+                    ],
+                ),
+                # This second response must NOT be consumed — the service
+                # should short-circuit after the auth_required error.
+                LLMResponse(text="THIS SHOULD NOT BE USED", tool_calls=[]),
+            ]
+        )
+        service = ChatService(
+            registry=registry,
+            provider=provider,
+            tool_executor=ToolExecutor(registry=registry),
+        )
+
+        reply = await service.send(
+            conversation=[ChatMessage(role="user", content="find sales")],
+            user=None,
+        )
+
+        assert reply.display_hint == "auth_required"
+        assert reply.data is not None
+        assert reply.data["plugin"] == "yardsailing"
+        assert "sign in" in reply.text.lower()
+        # Only the first LLM call happened
+        assert len(provider.calls) == 1
+        # The tool call was logged
+        assert len(reply.tool_events) == 1
+        assert reply.tool_events[0]["name"] == "find_yard_sales"
+    finally:
+        tool.auth_required = False
+
+
+async def test_chat_service_anonymous_user_public_tool_works(registry, httpx_mock):
+    """Anonymous user calling a non-auth_required tool works normally."""
+    httpx_mock.add_response(
+        method="GET",
+        url="https://api.yardsailing.sale/api/sales?lat=1.0&lng=2.0&radius_miles=10",
+        json={"sales": [{"id": 1, "title": "Sale"}]},
+    )
+
+    provider = MockProvider(
+        responses=[
+            LLMResponse(
+                text="",
+                tool_calls=[
+                    ToolCall(
+                        id="tc1",
+                        name="find_yard_sales",
+                        arguments={"lat": 1.0, "lng": 2.0, "radius_miles": 10},
+                    )
+                ],
+            ),
+            LLMResponse(text="Found 1", tool_calls=[]),
+        ]
+    )
+    service = ChatService(
+        registry=registry,
+        provider=provider,
+        tool_executor=ToolExecutor(registry=registry),
+    )
+
+    reply = await service.send(
+        conversation=[ChatMessage(role="user", content="find sales")],
+        user=None,
+    )
+
+    assert reply.text == "Found 1"
+    assert reply.display_hint == "map"

@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useHeaderHeight } from "@react-navigation/elements";
 
 import { DataCard } from "../chat/DataCard";
 import { MessageBubble } from "../chat/MessageBubble";
@@ -24,6 +25,7 @@ export function ChatScreen() {
   const { messages, send, sending, lastResponse } = useChat();
   const [input, setInput] = useState("");
   const listRef = useRef<FlatList>(null);
+  const headerHeight = useHeaderHeight();
 
   const activeComponent = useAppStore((s) => s.activeComponent);
   const hideComponent = useAppStore((s) => s.hideComponent);
@@ -38,7 +40,8 @@ export function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
     >
       <FlatList
         ref={listRef}

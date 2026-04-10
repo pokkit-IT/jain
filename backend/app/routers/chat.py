@@ -15,9 +15,19 @@ async def chat(
 ) -> ChatResponse:
     messages = [ChatMessage(role=turn.role, content=turn.content) for turn in req.history]
 
-    user_content = req.message
+    context_lines: list[str] = []
     if req.lat is not None and req.lng is not None:
-        user_content = f"[user location: lat={req.lat}, lng={req.lng}]\n{req.message}"
+        context_lines.append(f"[user location: lat={req.lat}, lng={req.lng}]")
+    if req.auth:
+        auth_pairs = ", ".join(
+            f"{name}={'logged_in' if v else 'not_logged_in'}"
+            for name, v in sorted(req.auth.items())
+        )
+        context_lines.append(f"[auth state: {auth_pairs}]")
+
+    user_content = (
+        "\n".join(context_lines) + "\n" + req.message if context_lines else req.message
+    )
     messages.append(ChatMessage(role="user", content=user_content))
 
     reply = await service.send(conversation=messages)

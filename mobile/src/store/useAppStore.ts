@@ -20,6 +20,10 @@ interface AppState {
   activeComponent: { plugin: string; name: string; props?: unknown } | null;
   showComponent: (plugin: string, name: string, props?: unknown) => void;
   hideComponent: () => void;
+
+  // Per-plugin auth state. Layer 1: hardcoded false until login UI lands.
+  auth: Record<string, boolean>;
+  setPluginAuth: (plugin: string, authenticated: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -53,4 +57,10 @@ export const useAppStore = create<AppState>((set) => ({
   showComponent: (plugin, name, props) =>
     set({ activeComponent: { plugin, name, props } }),
   hideComponent: () => set({ activeComponent: null }),
+
+  // Layer 1: yardsailing auth defaults to false until we add a login flow.
+  // Jain reads this via the chat request and prompts the user accordingly.
+  auth: { yardsailing: false },
+  setPluginAuth: (plugin, authenticated) =>
+    set((s) => ({ auth: { ...s.auth, [plugin]: authenticated } })),
 }));

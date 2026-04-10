@@ -11,6 +11,7 @@ export function useChat() {
   const showComponent = useAppStore((s) => s.showComponent);
   const location = useAppStore((s) => s.location);
   const plugins = useAppStore((s) => s.plugins);
+  const auth = useAppStore((s) => s.auth);
 
   const [sending, setSending] = useState(false);
   const [lastResponse, setLastResponse] = useState<ChatResponse | null>(null);
@@ -28,6 +29,7 @@ export function useChat() {
         history: messages,
         lat: location?.lat,
         lng: location?.lng,
+        auth,
       });
       setLastResponse(res);
       appendMessage({ role: "assistant", content: res.reply || "(no reply)" });

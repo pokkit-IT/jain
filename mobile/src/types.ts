@@ -37,3 +37,15 @@ export interface Sale {
   lng: number;
   description?: string;
 }
+
+export interface JainUser {
+  id: string;
+  email: string;
+  name: string;
+  picture_url: string | null;
+}
+
+export interface Session {
+  user: JainUser;
+  token: string;
+}

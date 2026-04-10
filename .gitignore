@@ -1,0 +1,6 @@
+# Editor / tool directories not part of JAIN source
+.gstack/
+.vscode/
+.idea/
+*.swp
+.DS_Store

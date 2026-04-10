@@ -13,10 +13,6 @@ class ChatRequest(BaseModel):
     history: list[ChatTurnIn] = Field(default_factory=list)
     lat: float | None = None
     lng: float | None = None
-    # Per-plugin auth state. Keys are plugin names, values are True/False.
-    # The chat router injects this into the system context so Jain can decide
-    # whether to call auth-required tools or prompt the user to log in first.
-    auth: dict[str, bool] = Field(default_factory=dict)
 
 
 class ChatResponse(BaseModel):

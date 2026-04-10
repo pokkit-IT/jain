@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends
 
+from app.auth.optional_user import get_current_user_optional
 from app.dependencies import get_chat_service
 from app.engine.base import ChatMessage
+from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat_service import ChatService
 
@@ -11,6 +13,7 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 @router.post("", response_model=ChatResponse)
 async def chat(
     req: ChatRequest,
+    user: User | None = Depends(get_current_user_optional),
     service: ChatService = Depends(get_chat_service),
 ) -> ChatResponse:
     messages = [ChatMessage(role=turn.role, content=turn.content) for turn in req.history]
@@ -18,19 +21,13 @@ async def chat(
     context_lines: list[str] = []
     if req.lat is not None and req.lng is not None:
         context_lines.append(f"[user location: lat={req.lat}, lng={req.lng}]")
-    if req.auth:
-        auth_pairs = ", ".join(
-            f"{name}={'logged_in' if v else 'not_logged_in'}"
-            for name, v in sorted(req.auth.items())
-        )
-        context_lines.append(f"[auth state: {auth_pairs}]")
 
     user_content = (
         "\n".join(context_lines) + "\n" + req.message if context_lines else req.message
     )
     messages.append(ChatMessage(role="user", content=user_content))
 
-    reply = await service.send(conversation=messages)
+    reply = await service.send(conversation=messages, user=user)
     return ChatResponse(
         reply=reply.text,
         data=reply.data,

@@ -17,6 +17,10 @@ class ToolDef(BaseModel):
     endpoint: str = ""
     # HTTP method. Defaults to GET. Use POST/PUT/DELETE for write operations.
     method: str = "GET"
+    # Phase 2B: when True, the tool executor refuses to call this tool
+    # unless the user is authenticated. Anonymous callers get a synthetic
+    # auth_required error instead of an upstream HTTP call.
+    auth_required: bool = False
 
 
 class SkillDef(BaseModel):

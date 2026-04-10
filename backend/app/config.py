@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_DAYS: int = 30
 
+    # Phase 2B: shared secret for JAIN ↔ plugin service-to-service calls.
+    # Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+    # Set in .env; plugins (e.g. yardsailing) must be configured with the same value.
+    JAIN_SERVICE_KEY: str = ""
+
     # Database
     DATABASE_URL: str = f"sqlite+aiosqlite:///{_BACKEND_DIR}/jain.db"
 

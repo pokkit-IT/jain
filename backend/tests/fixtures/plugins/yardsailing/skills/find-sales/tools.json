@@ -1,0 +1,16 @@
+[
+  {
+    "name": "find_yard_sales",
+    "description": "Search for yard sales near a location",
+    "endpoint": "/api/sales",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "radius_miles": { "type": "integer", "default": 10 }
+      },
+      "required": ["lat", "lng"]
+    }
+  }
+]

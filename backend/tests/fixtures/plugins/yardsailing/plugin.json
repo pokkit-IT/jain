@@ -1,0 +1,14 @@
+{
+  "name": "yardsailing",
+  "version": "1.0.0",
+  "description": "Find, create, and manage yard sales",
+  "author": "pokkit-IT",
+  "skills": [
+    {
+      "name": "find-sales",
+      "description": "Find yard sales near a location.",
+      "tools": ["find_yard_sales"]
+    }
+  ],
+  "api": { "base_url": "https://api.yardsailing.sale", "auth_required": false }
+}

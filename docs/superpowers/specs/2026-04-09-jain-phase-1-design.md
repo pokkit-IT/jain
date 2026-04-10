@@ -433,13 +433,16 @@ React, React Native, and core libs are treated as externals. Bundles contain onl
 
 ## Phase 1 Success Criteria
 
-- [ ] User opens JAIN app → lands on ChatScreen with Jain greeting
-- [ ] User asks "find yard sales near me" → Jain invokes `find_yard_sales` tool → core Map renders pins
-- [ ] User taps Map tab → sees same pins on full-screen map
-- [ ] User says "I want to create a yard sale" → Jain gathers info conversationally OR renders `SaleForm` from the yardsailing plugin bundle → submission creates a real sale in yardsailing's DB
-- [ ] Settings screen shows configured LLM provider (read-only)
-- [ ] LLM provider abstraction is in place: `LLMProvider` interface defined, `AnthropicProvider` implemented, config reads `LLM_PROVIDER` env var. Adding a second provider in Phase 2 requires zero changes to `chat_service.py`, `tool_executor.py`, or `context_builder.py` — only a new file under `engine/`.
-- [ ] Yardsailing backend is unchanged — no code edits in that repo
+- [x] User opens JAIN app → lands on ChatScreen with Jain greeting
+- [x] User asks "find yard sales near me" → Jain invokes `find_yard_sales` tool → core Map renders pins
+- [x] User taps Map tab → sees same pins on full-screen map
+- [~] User says "I want to create a yard sale" → Jain gathers info conversationally OR renders `SaleForm` from the yardsailing plugin bundle → submission creates a real sale in yardsailing's DB
+  - **Status: DEFERRED to Phase 2.** Yardsailing's `POST /api/sales` requires `Depends(get_current_user)` plus payment-token verification. The "anonymous requests for now" assumption only holds for read endpoints; anonymous writes are architecturally impossible without modifying yardsailing.
+  - **Phase 1 ships Layer 1 graceful degradation** instead: per-plugin auth state flows through chat context, and `create-sale/SKILL.md` checks `[auth state: yardsailing=...]` as STEP 1. When not authenticated (always true in Phase 1), Jain politely tells the user to log in via Settings instead of attempting the broken tool call. The end-user experience is correct even though the criterion's literal "creates a real sale" is unmet.
+  - **Real conversational + form-based create flow** ships in Phase 2 along with OAuth and yardsailing JWT bridge.
+- [x] Settings screen shows configured LLM provider (read-only)
+- [x] LLM provider abstraction is in place: `LLMProvider` interface defined, `AnthropicProvider` implemented, config reads `LLM_PROVIDER` env var. Adding a second provider in Phase 2 requires zero changes to `chat_service.py`, `tool_executor.py`, or `context_builder.py` — only a new file under `engine/`.
+- [x] Yardsailing backend is unchanged — no code edits in that repo
 
 ## Phase 1 Deployment
 

@@ -23,7 +23,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
 
     # JAIN JWT signing (sub-project A)
-    JWT_SECRET: str = "change-me-in-production"
+    # Dev default is ≥32 bytes to satisfy pyjwt's HS256 key-length check.
+    # Production must override via .env with `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+    JWT_SECRET: str = "dev-secret-change-me-in-production-at-least-32-bytes"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_DAYS: int = 30
 

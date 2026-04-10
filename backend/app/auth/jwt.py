@@ -32,8 +32,12 @@ def verify_access_token(token: str) -> dict[str, Any]:
         jwt.InvalidSignatureError: signature does not match
         jwt.ExpiredSignatureError: token has expired
         jwt.DecodeError: token is malformed
+        jwt.MissingRequiredClaimError: token is missing sub/exp/iat
         jwt.InvalidTokenError: other validation failures
     """
     return pyjwt.decode(
-        token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
+        token,
+        settings.JWT_SECRET,
+        algorithms=[settings.JWT_ALGORITHM],
+        options={"require": ["sub", "exp", "iat"]},
     )

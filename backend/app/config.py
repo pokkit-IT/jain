@@ -1,6 +1,10 @@
+import logging
+import warnings
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEV_JWT_SECRET_PREFIX = "dev-secret-"
 
 _BACKEND_DIR = Path(__file__).resolve().parents[1]
 _REPO_DIR = _BACKEND_DIR.parent
@@ -40,3 +44,12 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+if settings.JWT_SECRET.startswith(_DEV_JWT_SECRET_PREFIX):
+    msg = (
+        "JAIN is running on the default dev JWT_SECRET — tokens are NOT secure. "
+        "Override JWT_SECRET in .env before any non-local use. Generate with: "
+        "python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+    )
+    logging.getLogger("jain.config").warning(msg)
+    warnings.warn(msg, stacklevel=1)

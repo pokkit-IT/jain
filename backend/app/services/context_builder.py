@@ -1,3 +1,4 @@
+from app.models.user import User
 from app.plugins.registry import PluginRegistry
 
 JAIN_SYSTEM_PROMPT_BASE = """You are Jain, an AI assistant that helps users through a set of skills provided by plugins.
@@ -14,8 +15,22 @@ Ask the user which they prefer if it's not obvious from context.
 """
 
 
-def build_system_prompt(registry: PluginRegistry) -> str:
+def build_system_prompt(registry: PluginRegistry, user: User | None = None) -> str:
     parts = [JAIN_SYSTEM_PROMPT_BASE]
+
+    # Phase 2B: inject the user's global auth state. The platform gates
+    # auth-required tools at the executor level, so Jain just needs to know
+    # whether the user is signed in for conversational framing.
+    if user is not None:
+        parts.append(
+            f"\n\n[user signed in as {user.email} ({user.name})]"
+        )
+    else:
+        parts.append(
+            "\n\n[user not authenticated — if they ask for something that requires signing in, "
+            "the platform will refuse the tool call automatically and prompt them to sign in. "
+            "You don't need to check auth state yourself.]"
+        )
 
     skills = registry.skill_descriptions()
     if skills:

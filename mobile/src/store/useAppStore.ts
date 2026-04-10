@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ChatTurn, LocationState, PluginSummary, Sale } from "../types";
+import { ChatTurn, LocationState, PluginSummary, Sale, Session } from "../types";
 
 interface AppState {
   location: LocationState | null;
@@ -24,6 +24,10 @@ interface AppState {
   // Per-plugin auth state. Layer 1: hardcoded false until login UI lands.
   auth: Record<string, boolean>;
   setPluginAuth: (plugin: string, authenticated: boolean) => void;
+
+  // Phase 2A: real JAIN session (Google OAuth). Null when signed out.
+  session: Session | null;
+  setSession: (session: Session | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -63,4 +67,8 @@ export const useAppStore = create<AppState>((set) => ({
   auth: { yardsailing: false },
   setPluginAuth: (plugin, authenticated) =>
     set((s) => ({ auth: { ...s.auth, [plugin]: authenticated } })),
+
+  // Phase 2A: real JAIN session (Google OAuth). Null when signed out.
+  session: null,
+  setSession: (session) => set({ session }),
 }));

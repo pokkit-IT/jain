@@ -10,5 +10,5 @@
       "tools": ["find_yard_sales"]
     }
   ],
-  "api": { "base_url": "https://api.yardsailing.sale", "auth_required": false }
+  "api": { "base_url": "https://api.yardsailing.sale" }
 }

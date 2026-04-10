@@ -121,12 +121,16 @@ class ChatService:
                 except (json.JSONDecodeError, TypeError):
                     parsed = None
 
-                # Phase 2B: short-circuit on auth_required synthetic error.
-                # The LLM's in-progress response is discarded; the user sees
-                # only a short "sign in first" message + inline login prompt.
+                # Phase 2B: short-circuit on auth_required synthetic error
+                # from the executor's gate. We check the __source sentinel
+                # so a plugin returning {"error": "auth_required"} in its
+                # own response body does NOT trigger the login prompt for a
+                # user who is already signed in. Only executor-generated
+                # refusals flow through here.
                 if (
                     isinstance(parsed, dict)
                     and parsed.get("error") == "auth_required"
+                    and parsed.get("__source") == "jain_executor_gate"
                 ):
                     return ChatReply(
                         text="I'd love to help with that — you'll need to sign in first.",

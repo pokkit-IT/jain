@@ -37,7 +37,6 @@ class PluginComponents(BaseModel):
 
 class PluginApi(BaseModel):
     base_url: str
-    auth_required: bool = False
 
 
 class PluginManifest(BaseModel):

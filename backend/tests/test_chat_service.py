@@ -296,3 +296,66 @@ async def test_chat_service_anonymous_user_public_tool_works(registry, httpx_moc
 
     assert reply.text == "Found 1"
     assert reply.display_hint == "map"
+
+
+async def test_chat_service_does_not_short_circuit_on_plugin_returned_auth_required(registry, httpx_mock):
+    """If a plugin's actual HTTP response body is {"error": "auth_required"}
+    (no __source sentinel), the chat service should NOT trigger the login
+    prompt — it's a plugin-level error, not an executor gate refusal."""
+    from uuid import uuid4
+
+    from app.config import settings
+    from app.models.user import User
+
+    original_key = settings.JAIN_SERVICE_KEY
+    settings.JAIN_SERVICE_KEY = "test-key-short-circuit-negative"
+
+    try:
+        # Plugin returns an auth_required-shaped body but WITHOUT __source
+        httpx_mock.add_response(
+            method="GET",
+            url="https://api.yardsailing.sale/api/sales?lat=1.0&lng=2.0&radius_miles=10",
+            json={"error": "auth_required", "plugin": "yardsailing"},
+        )
+
+        provider = MockProvider(
+            responses=[
+                LLMResponse(
+                    text="",
+                    tool_calls=[
+                        ToolCall(
+                            id="tc1",
+                            name="find_yard_sales",
+                            arguments={"lat": 1.0, "lng": 2.0, "radius_miles": 10},
+                        )
+                    ],
+                ),
+                # This SHOULD be consumed — the plugin error is not a gate refusal
+                LLMResponse(text="The plugin had an error", tool_calls=[]),
+            ]
+        )
+        service = ChatService(
+            registry=registry,
+            provider=provider,
+            tool_executor=ToolExecutor(registry=registry),
+        )
+
+        user = User(
+            id=uuid4(),
+            email="jim@example.com",
+            name="Jim",
+            email_verified=True,
+            google_sub="g-neg",
+        )
+        reply = await service.send(
+            conversation=[ChatMessage(role="user", content="find sales")],
+            user=user,
+        )
+
+        # Did NOT short-circuit — display_hint should not be auth_required
+        assert reply.display_hint != "auth_required"
+        assert reply.text == "The plugin had an error"
+        # Both LLM calls happened
+        assert len(provider.calls) == 2
+    finally:
+        settings.JAIN_SERVICE_KEY = original_key

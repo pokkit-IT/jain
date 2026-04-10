@@ -51,7 +51,7 @@ def test_manifest_parses_full():
             },
         ],
         "components": {"bundle": "dist/components.bundle.js", "exports": ["SaleForm"]},
-        "api": {"base_url": "https://api.yardsailing.sale", "auth_required": False},
+        "api": {"base_url": "https://api.yardsailing.sale"},
     }
     m = PluginManifest.model_validate(data)
     assert m.components.bundle == "dist/components.bundle.js"

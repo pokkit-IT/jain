@@ -58,3 +58,13 @@ if settings.JWT_SECRET.startswith(_DEV_JWT_SECRET_PREFIX):
     )
     logging.getLogger("jain.config").warning(msg)
     warnings.warn(msg, stacklevel=1)
+
+if not settings.JAIN_SERVICE_KEY:
+    msg = (
+        "JAIN_SERVICE_KEY is empty — authenticated tool calls will be forwarded "
+        "as anonymous (no service-key header). Set JAIN_SERVICE_KEY in .env to "
+        "enable authenticated plugin calls. Generate with: "
+        'python -c "import secrets; print(secrets.token_urlsafe(32))"'
+    )
+    logging.getLogger("jain.config").warning(msg)
+    warnings.warn(msg, stacklevel=1)

@@ -138,7 +138,8 @@ async def test_execute_forwards_service_key_headers_when_user_present(registry, 
         sent_request = httpx_mock.get_requests()[0]
         assert sent_request.headers["x-jain-service-key"] == "test-service-key-1234"
         assert sent_request.headers["x-jain-user-email"] == "jim@example.com"
-        assert sent_request.headers["x-jain-user-name"] == "Jim Shelly"
+        # Name is URL-encoded; spaces become %20
+        assert sent_request.headers["x-jain-user-name"] == "Jim%20Shelly"
     finally:
         settings.JAIN_SERVICE_KEY = original_key
 
@@ -165,3 +166,96 @@ async def test_execute_no_service_key_headers_when_user_absent(registry, httpx_m
     assert "x-jain-service-key" not in sent_request.headers
     assert "x-jain-user-email" not in sent_request.headers
     assert "x-jain-user-name" not in sent_request.headers
+
+
+async def test_execute_handles_unicode_user_name(registry, httpx_mock):
+    """Authenticated users with non-ASCII names (CJK, accents, emoji) must
+    not crash the tool executor. User identity headers are URL-encoded."""
+    from urllib.parse import unquote
+    from uuid import uuid4
+
+    from app.config import settings
+    from app.models.user import User
+
+    original_key = settings.JAIN_SERVICE_KEY
+    settings.JAIN_SERVICE_KEY = "test-service-key-unicode"
+
+    try:
+        httpx_mock.add_response(
+            method="GET",
+            url="https://api.yardsailing.sale/api/sales?lat=1.0&lng=2.0&radius_miles=10",
+            json={"sales": []},
+        )
+
+        user = User(
+            id=uuid4(),
+            email="jīm@example.com",
+            name="Jīm Shëlly 山田",
+            email_verified=True,
+            google_sub="g-unicode",
+        )
+
+        executor = ToolExecutor(registry=registry)
+        result = await executor.execute(
+            ToolCall(
+                id="tc1",
+                name="find_yard_sales",
+                arguments={"lat": 1.0, "lng": 2.0, "radius_miles": 10},
+            ),
+            user=user,
+        )
+
+        # Did not crash
+        assert json.loads(result.content) == {"sales": []}
+
+        # Headers round-trip correctly when URL-decoded
+        sent = httpx_mock.get_requests()[0]
+        assert unquote(sent.headers["x-jain-user-email"]) == "jīm@example.com"
+        assert unquote(sent.headers["x-jain-user-name"]) == "Jīm Shëlly 山田"
+    finally:
+        settings.JAIN_SERVICE_KEY = original_key
+
+
+async def test_execute_skips_user_headers_when_service_key_empty(registry, httpx_mock):
+    """When JAIN_SERVICE_KEY is empty, the executor does NOT forward user
+    identity headers even for authenticated users — fail safe rather than
+    send an empty key header."""
+    from uuid import uuid4
+
+    from app.config import settings
+    from app.models.user import User
+
+    original_key = settings.JAIN_SERVICE_KEY
+    settings.JAIN_SERVICE_KEY = ""
+
+    try:
+        httpx_mock.add_response(
+            method="GET",
+            url="https://api.yardsailing.sale/api/sales?lat=1.0&lng=2.0&radius_miles=10",
+            json={"sales": []},
+        )
+
+        user = User(
+            id=uuid4(),
+            email="jim@example.com",
+            name="Jim",
+            email_verified=True,
+            google_sub="g-empty-key",
+        )
+
+        executor = ToolExecutor(registry=registry)
+        await executor.execute(
+            ToolCall(
+                id="tc1",
+                name="find_yard_sales",
+                arguments={"lat": 1.0, "lng": 2.0, "radius_miles": 10},
+            ),
+            user=user,
+        )
+
+        sent = httpx_mock.get_requests()[0]
+        assert "x-jain-service-key" not in sent.headers
+        assert "x-jain-user-email" not in sent.headers
+        assert "x-jain-user-name" not in sent.headers
+    finally:
+        settings.JAIN_SERVICE_KEY = original_key

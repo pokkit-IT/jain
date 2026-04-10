@@ -1,11 +1,6 @@
 from dataclasses import dataclass
 
-# NOTE: google.auth.transport.requests requires the `requests` package, which
-# is not installed (Task 1 deps did not pull it in, and this task forbids new
-# installs). google.auth.transport._http_client is the stdlib-only transport
-# shipped with google-auth and is used here instead. Swap to
-# `google.auth.transport.requests` if `requests` is added to deps later.
-from google.auth.transport import _http_client as google_transport
+from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 
 from app.config import settings
@@ -33,7 +28,7 @@ def verify_id_token(id_token_str: str) -> VerifiedGoogleClaims:
     try:
         claims = google_id_token.verify_oauth2_token(
             id_token_str,
-            google_transport.Request(),
+            google_requests.Request(),
             settings.GOOGLE_CLIENT_ID,
         )
     except ValueError as e:

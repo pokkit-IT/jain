@@ -1,11 +1,18 @@
-import * as AuthSession from "expo-auth-session";
+import { ResponseType } from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 
 // Required by expo-web-browser when returning from the OAuth redirect.
 WebBrowser.maybeCompleteAuthSession();
 
-const CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+// Platform-specific client IDs from Google Cloud Console.
+// - iOS client uses Bundle ID `host.exp.Exponent` (Expo Go's native bundle)
+// - Android client uses package `host.exp.exponent` + Expo Go SHA-1
+// - Web client uses `https://auth.expo.io/...` redirect (or localhost)
+// expo-auth-session picks the right one based on Platform.OS at runtime.
+const IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "";
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? "";
+const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "";
 
 /**
  * Hook that returns a `signIn` function plus reactive state.
@@ -20,15 +27,19 @@ export function useGoogleSignIn(): {
   ready: boolean;
 } {
   const [request, , promptAsync] = Google.useAuthRequest({
-    clientId: CLIENT_ID,
+    iosClientId: IOS_CLIENT_ID || undefined,
+    androidClientId: ANDROID_CLIENT_ID || undefined,
+    webClientId: WEB_CLIENT_ID || undefined,
     scopes: ["openid", "email", "profile"],
-    // Use the Expo proxy so we don't need per-platform redirect config.
-    redirectUri: AuthSession.makeRedirectUri({ useProxy: true } as any),
+    // Request an OIDC ID token (JWT) — our backend verifies this against
+    // Google's public keys. The default (Token) only returns an access_token
+    // for calling Google APIs, which isn't useful for identity.
+    responseType: ResponseType.IdToken,
   });
 
   const signIn = async (): Promise<string | null> => {
     if (!request) return null;
-    const result = await promptAsync({ useProxy: true } as any);
+    const result = await promptAsync();
     if (result?.type !== "success") return null;
     // The ID token is in result.params.id_token for the Google provider.
     const idToken = (result.params as { id_token?: string }).id_token;

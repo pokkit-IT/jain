@@ -1,10 +1,14 @@
 import json
+from typing import TYPE_CHECKING
 
 import httpx
 
 from app.plugins.registry import PluginRegistry
 
 from .base import ToolCall, ToolResult
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class ToolExecutor:
@@ -24,7 +28,9 @@ class ToolExecutor:
             await self._http.aclose()
             self._http = None
 
-    async def execute(self, call: ToolCall) -> ToolResult:
+    async def execute(
+        self, call: ToolCall, user: "User | None" = None
+    ) -> ToolResult:
         plugin, tool = self.registry.find_tool(call.name)
         if plugin is None or tool is None:
             return ToolResult(
@@ -38,20 +44,40 @@ class ToolExecutor:
                 content=json.dumps({"error": f"plugin '{plugin.manifest.name}' has no api"}),
             )
 
+        # Phase 2B: gate auth-required tools at the executor level.
+        # Anonymous callers (user is None) get a synthetic error result
+        # without any HTTP call so the chat service can short-circuit to
+        # display_hint: "auth_required".
+        if tool.auth_required and user is None:
+            return ToolResult(
+                tool_call_id=call.id,
+                content=json.dumps({
+                    "error": "auth_required",
+                    "plugin": plugin.manifest.name,
+                }),
+            )
+
         base_url = plugin.manifest.api.base_url.rstrip("/")
         endpoint = tool.endpoint or f"/{tool.name}"
         url = base_url + endpoint
         method = (tool.method or "GET").upper()
 
+        # Phase 2B: build headers, adding service-key + user identity when
+        # the caller is authenticated. Anonymous calls to public tools send
+        # no auth headers at all.
+        headers = {"X-Requested-With": "XMLHttpRequest"}
+        if user is not None:
+            from app.config import settings
+            headers["X-Jain-Service-Key"] = settings.JAIN_SERVICE_KEY
+            headers["X-Jain-User-Email"] = user.email
+            headers["X-Jain-User-Name"] = user.name
+
         client = await self._get_http()
         try:
             if method == "GET":
-                response = await client.get(url, params=call.arguments)
+                response = await client.get(url, params=call.arguments, headers=headers)
             else:
-                # Mutating methods send arguments as JSON body. The
-                # X-Requested-With header satisfies CSRF middleware on
-                # APIs that require it (e.g. yardsailing).
-                headers = {"X-Requested-With": "XMLHttpRequest"}
+                # Mutating methods send arguments as JSON body.
                 response = await client.request(
                     method, url, json=call.arguments, headers=headers
                 )

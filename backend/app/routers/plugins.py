@@ -5,7 +5,9 @@ from urllib.parse import quote
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import PlainTextResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel
+from starlette.routing import Match
 
 from app.auth.optional_user import get_current_user_optional
 from app.config import settings
@@ -68,6 +70,13 @@ async def call_plugin_api(
     plugin = registry.get_plugin(plugin_name)
     if plugin is None:
         raise HTTPException(status_code=404, detail=f"plugin '{plugin_name}' not found")
+
+    # Phase 3: internal plugins are dispatched via their in-process router
+    # rather than httpx. Look up the route on the plugin's registration
+    # that matches (method, path) and invoke it directly.
+    if plugin.manifest.type == "internal":
+        return await _dispatch_internal(plugin, req, user)
+
     if plugin.manifest.api is None:
         raise HTTPException(
             status_code=400, detail=f"plugin '{plugin_name}' has no api base_url"
@@ -133,4 +142,63 @@ async def call_plugin_api(
         content=resp.content,
         status_code=resp.status_code,
         media_type=resp.headers.get("content-type", "application/json"),
+    )
+
+
+async def _dispatch_internal(
+    plugin, req: PluginCallRequest, user: "User | None"
+) -> Response:
+    """Dispatch a proxy call to an internal plugin by invoking the
+    matching APIRoute on its registration.router directly.
+
+    This preserves the mobile PluginBridge interface (POST to
+    /api/plugins/{name}/call with method/path/body) while avoiding a
+    real HTTP round-trip. NOTE: this is a naive dispatcher that only
+    handles single-body-arg routes. Stage 3 Task 24 upgrades it to an
+    ASGI sub-request for routes that use FastAPI dependencies.
+    """
+    import json as _json
+
+    registration = getattr(plugin, "registration", None)
+    if registration is None or registration.router is None:
+        raise HTTPException(
+            status_code=500,
+            detail=f"internal plugin '{plugin.manifest.name}' has no router",
+        )
+
+    method = req.method.upper()
+    path = req.path
+
+    for route in registration.router.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        if method not in route.methods:
+            continue
+        scope = {"type": "http", "method": method, "path": path, "headers": []}
+        match, _child_scope = route.matches(scope)
+        if match == Match.FULL:
+            try:
+                if method == "GET":
+                    result = await route.endpoint()
+                else:
+                    result = await route.endpoint(req.body or {})
+            except HTTPException as e:
+                return Response(
+                    content=_json.dumps({"detail": e.detail}),
+                    status_code=e.status_code,
+                    media_type="application/json",
+                )
+            return Response(
+                content=(
+                    _json.dumps(result)
+                    if not isinstance(result, (bytes, str))
+                    else result
+                ),
+                status_code=200,
+                media_type="application/json",
+            )
+
+    raise HTTPException(
+        status_code=404,
+        detail=f"no route for {method} {path} on plugin '{plugin.manifest.name}'",
     )

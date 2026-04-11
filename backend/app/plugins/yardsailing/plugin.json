@@ -1,0 +1,19 @@
+{
+  "name": "yardsailing",
+  "version": "1.0.0",
+  "description": "Find, create, and manage yard sales",
+  "author": "jim shelly",
+  "type": "internal",
+  "skills": [
+    {
+      "name": "create-sale",
+      "description": "Help user create a yard sale listing. Gather info conversationally or present a form.",
+      "tools": ["create_yard_sale", "show_sale_form"],
+      "components": ["SaleForm"]
+    }
+  ],
+  "components": {
+    "bundle": "bundle/yardsailing.js",
+    "exports": ["SaleForm"]
+  }
+}

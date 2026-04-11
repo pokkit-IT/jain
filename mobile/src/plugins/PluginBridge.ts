@@ -1,6 +1,4 @@
-import axios from "axios";
-import { Alert } from "react-native";
-
+import { apiClient } from "../api/client";
 import { useAppStore } from "../store/useAppStore";
 
 export interface PluginBridge {
@@ -12,19 +10,30 @@ export interface PluginBridge {
 export function makeBridgeForPlugin(pluginName: string): PluginBridge {
   return {
     async callPluginApi(path, method, body) {
-      const plugin = useAppStore.getState().plugins.find((p) => p.name === pluginName);
-      if (!plugin?.api?.base_url) {
-        throw new Error(`plugin ${pluginName} has no api base_url`);
-      }
-      const url = plugin.api.base_url.replace(/\/$/, "") + path;
-      const res = await axios.request({ url, method, data: body });
+      // Phase 2B: route plugin API calls THROUGH JAIN's backend instead
+      // of directly from the browser. This gives us:
+      //   1. No CORS issues (same-origin to JAIN)
+      //   2. JAIN's service-key + user identity headers are forwarded to
+      //      the plugin via /api/plugins/{name}/call — same auth path as
+      //      the tool executor
+      //   3. apiClient already attaches the JAIN JWT Authorization header
+      //      via the interceptor, so JAIN knows who's calling
+      const res = await apiClient.post(
+        `/api/plugins/${pluginName}/call`,
+        { method, path, body },
+      );
       return res.data;
     },
     closeComponent() {
       useAppStore.getState().hideComponent();
     },
     showToast(msg) {
-      Alert.alert(msg);
+      // Best-effort inline toast via window.alert on web. Native toast
+      // libraries are out of Phase 2B scope; SaleForm displays its own
+      // inline success message so this is just a fallback.
+      if (typeof window !== "undefined" && typeof window.alert === "function") {
+        window.alert(msg);
+      }
     },
   };
 }

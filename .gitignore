@@ -4,3 +4,7 @@
 .idea/
 *.swp
 .DS_Store
+
+# Plugin build artifacts
+backend/app/plugins/yardsailing/node_modules/
+backend/app/plugins/yardsailing/package-lock.json

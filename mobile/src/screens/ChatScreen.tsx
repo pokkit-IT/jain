@@ -26,6 +26,7 @@ export function ChatScreen() {
   const { messages, send, sending, lastResponse } = useChat();
   const [input, setInput] = useState("");
   const listRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
   const headerHeight = useHeaderHeight();
 
   const activeComponent = useAppStore((s) => s.activeComponent);
@@ -36,6 +37,8 @@ export function ChatScreen() {
     setInput("");
     await send(text);
     listRef.current?.scrollToEnd({ animated: true });
+    // Refocus the input so the user can keep typing without tapping back.
+    inputRef.current?.focus();
   };
 
   return (
@@ -61,12 +64,16 @@ export function ChatScreen() {
 
       <View style={styles.inputRow}>
         <TextInput
+          ref={inputRef}
           style={styles.input}
           value={input}
           onChangeText={setInput}
           placeholder="Ask Jain anything..."
           editable={!sending}
           onSubmitEditing={onSend}
+          autoFocus
+          blurOnSubmit={false}
+          returnKeyType="send"
         />
         <TouchableOpacity
           style={[styles.sendButton, sending && styles.sendDisabled]}

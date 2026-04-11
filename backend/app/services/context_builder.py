@@ -27,9 +27,16 @@ def build_system_prompt(registry: PluginRegistry, user: User | None = None) -> s
         )
     else:
         parts.append(
-            "\n\n[user not authenticated — if they ask for something that requires signing in, "
-            "the platform will refuse the tool call automatically and prompt them to sign in. "
-            "You don't need to check auth state yourself.]"
+            "\n\n[USER NOT AUTHENTICATED. "
+            "If the user asks to create, update, delete, post, book, schedule, or save anything — "
+            "ANY write action on their data — respond IMMEDIATELY with a short message asking them "
+            "to sign in, and invoke the appropriate tool so the platform can show the login prompt. "
+            "Do NOT gather information, ask clarifying questions, or continue the conversation about "
+            "the task until they sign in. Example: if they say 'I want to create a yard sale', call "
+            "create_yard_sale with minimal placeholder arguments (or just the user's own wording as "
+            "a title) — the platform will refuse the call, block the request, and show an inline "
+            "sign-in button. Read-only actions (find, search, show, list) are OK to perform without "
+            "authentication.]"
         )
 
     skills = registry.skill_descriptions()

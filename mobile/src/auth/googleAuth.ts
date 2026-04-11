@@ -35,6 +35,14 @@ export function useGoogleSignIn(): {
     // Google's public keys. The default (Token) only returns an access_token
     // for calling Google APIs, which isn't useful for identity.
     responseType: ResponseType.IdToken,
+    // Force Google to show the account picker. Without this, Google
+    // auto-approves the request if the user already has an active session,
+    // redirecting the popup so fast that Chrome's Cross-Origin-Opener-Policy
+    // prevents expo-web-browser from detecting the close event. The account
+    // picker keeps the popup open long enough for the result to propagate.
+    extraParams: {
+      prompt: "select_account",
+    },
   });
 
   const signIn = async (): Promise<string | null> => {

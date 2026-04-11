@@ -1,5 +1,5 @@
 from app.models.user import User
-from app.plugins.registry import PluginRegistry
+from app.plugins.core.registry import PluginRegistry
 
 JAIN_SYSTEM_PROMPT_BASE = """You are Jain, an AI assistant that helps users through a set of skills provided by plugins.
 

@@ -4,7 +4,7 @@ from .config import settings
 from .engine.anthropic_provider import AnthropicProvider
 from .engine.base import LLMProvider
 from .engine.tool_executor import ToolExecutor
-from .plugins.registry import PluginRegistry
+from .plugins.core.registry import PluginRegistry
 from .services.chat_service import ChatService
 
 

@@ -2,7 +2,7 @@ from typing import Any
 
 from anthropic import AsyncAnthropic
 
-from app.plugins.schema import ToolDef
+from app.plugins.core.schema import ToolDef
 
 from .base import ChatMessage, LLMProvider, LLMResponse, ToolCall
 

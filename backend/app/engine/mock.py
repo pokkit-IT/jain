@@ -1,4 +1,4 @@
-from app.plugins.schema import ToolDef
+from app.plugins.core.schema import ToolDef
 
 from .base import ChatMessage, LLMProvider, LLMResponse
 

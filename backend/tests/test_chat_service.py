@@ -6,7 +6,7 @@ import pytest
 from app.engine.base import ChatMessage, LLMResponse, ToolCall
 from app.engine.mock import MockProvider
 from app.engine.tool_executor import ToolExecutor
-from app.plugins.registry import PluginRegistry
+from app.plugins.core.registry import PluginRegistry
 from app.services.chat_service import ChatService
 
 FIXTURES = Path(__file__).parent / "fixtures" / "plugins"

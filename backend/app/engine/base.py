@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.plugins.schema import ToolDef
+from app.plugins.core.schema import ToolDef
 
 
 @dataclass

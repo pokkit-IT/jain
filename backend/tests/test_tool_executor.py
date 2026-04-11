@@ -6,7 +6,7 @@ import pytest
 
 from app.engine.base import ToolCall
 from app.engine.tool_executor import ToolExecutor
-from app.plugins.registry import PluginRegistry
+from app.plugins.core.registry import PluginRegistry
 
 FIXTURES = Path(__file__).parent / "fixtures" / "plugins"
 

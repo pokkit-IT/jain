@@ -8,7 +8,7 @@ from app.engine.base import LLMResponse, ToolCall
 from app.engine.mock import MockProvider
 from app.engine.tool_executor import ToolExecutor
 from app.main import create_app
-from app.plugins.registry import PluginRegistry
+from app.plugins.core.registry import PluginRegistry
 from app.services.chat_service import ChatService
 
 FIXTURES = Path(__file__).parent / "fixtures" / "plugins"
@@ -91,7 +91,7 @@ async def test_chat_endpoint_resolves_user_from_bearer_token():
     from app.main import create_app
     from app.models.base import Base
     from app.models.user import User
-    from app.plugins.registry import PluginRegistry
+    from app.plugins.core.registry import PluginRegistry
     from app.services.chat_service import ChatService
 
     # Set up in-memory DB with a user row
@@ -171,7 +171,7 @@ async def test_chat_endpoint_bad_token_treats_as_anonymous():
     from app.engine.tool_executor import ToolExecutor
     from app.main import create_app
     from app.models.base import Base
-    from app.plugins.registry import PluginRegistry
+    from app.plugins.core.registry import PluginRegistry
     from app.services.chat_service import ChatService
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")

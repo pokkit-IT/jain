@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from app.plugins.loader import LoadedPlugin
-from app.plugins.registry import PluginRegistry
-from app.plugins.schema import PluginManifest
+from app.plugins.core.loader import LoadedPlugin
+from app.plugins.core.registry import PluginRegistry
+from app.plugins.core.schema import PluginManifest
 
 FIXTURES = Path(__file__).parent / "fixtures" / "plugins"
 

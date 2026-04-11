@@ -2,7 +2,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.models.user import User
-from app.plugins.registry import PluginRegistry
+from app.plugins.core.registry import PluginRegistry
 from app.services.context_builder import JAIN_SYSTEM_PROMPT_BASE, build_system_prompt
 
 FIXTURES = Path(__file__).parent / "fixtures" / "plugins"

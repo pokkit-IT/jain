@@ -5,7 +5,7 @@ from typing import Any
 from app.engine.base import ChatMessage, LLMProvider, ToolResult
 from app.engine.tool_executor import ToolExecutor
 from app.models.user import User
-from app.plugins.registry import PluginRegistry
+from app.plugins.core.registry import PluginRegistry
 
 from .context_builder import build_system_prompt
 

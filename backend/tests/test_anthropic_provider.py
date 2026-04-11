@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from app.engine.anthropic_provider import AnthropicProvider
 from app.engine.base import ChatMessage, ToolCall, ToolResult
-from app.plugins.schema import ToolDef, ToolInputSchema
+from app.plugins.core.schema import ToolDef, ToolInputSchema
 
 
 def _make_tool() -> ToolDef:

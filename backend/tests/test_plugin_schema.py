@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.plugins.schema import PluginManifest, SkillDef, ToolDef, ToolInputSchema
+from app.plugins.core.schema import PluginManifest, SkillDef, ToolDef, ToolInputSchema
 
 
 def test_tool_def_parses():

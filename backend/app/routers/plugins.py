@@ -11,7 +11,7 @@ from app.auth.optional_user import get_current_user_optional
 from app.config import settings
 from app.dependencies import get_registry
 from app.models.user import User
-from app.plugins.registry import PluginRegistry
+from app.plugins.core.registry import PluginRegistry
 from app.schemas.plugin import PluginListResponse
 
 router = APIRouter(prefix="/api/plugins", tags=["plugins"])

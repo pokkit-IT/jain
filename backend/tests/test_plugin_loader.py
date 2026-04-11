@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.plugins.loader import LoadedPlugin, load_plugin, load_plugins_from_dir
+from app.plugins.core.loader import LoadedPlugin, load_plugin, load_plugins_from_dir
 
 FIXTURES = Path(__file__).parent / "fixtures" / "plugins"
 

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 from app.config import settings
-from app.plugins.registry import PluginRegistry
+from app.plugins.core.registry import PluginRegistry
 
 from .base import ToolCall, ToolResult
 

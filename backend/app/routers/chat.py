@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.optional_user import get_current_user_optional
+from app.database import get_db
 from app.dependencies import get_chat_service
 from app.engine.base import ChatMessage
 from app.models.user import User
@@ -15,6 +17,7 @@ async def chat(
     req: ChatRequest,
     user: User | None = Depends(get_current_user_optional),
     service: ChatService = Depends(get_chat_service),
+    db: AsyncSession = Depends(get_db),
 ) -> ChatResponse:
     messages = [ChatMessage(role=turn.role, content=turn.content) for turn in req.history]
 
@@ -27,7 +30,7 @@ async def chat(
     )
     messages.append(ChatMessage(role="user", content=user_content))
 
-    reply = await service.send(conversation=messages, user=user)
+    reply = await service.send(conversation=messages, user=user, db=db)
     return ChatResponse(
         reply=reply.text,
         data=reply.data,

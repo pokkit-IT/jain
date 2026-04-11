@@ -347,3 +347,41 @@ async def test_execute_calls_handler_for_internal_tool():
 
     assert called["args"] == {"who": "world"}
     assert json.loads(result.content) == {"greeting": "hi"}
+
+
+async def test_handler_receives_db_session_when_provided():
+    from pathlib import Path
+    from unittest.mock import MagicMock
+
+    from app.engine.base import ToolCall
+    from app.engine.tool_executor import ToolExecutor
+    from app.plugins.core.loader import LoadedPlugin
+    from app.plugins.core.registry import PluginRegistry
+    from app.plugins.core.schema import PluginManifest, ToolDef, ToolInputSchema
+
+    captured = {}
+
+    async def handler(args, user=None, db=None):
+        captured["db"] = db
+        return {"ok": True}
+
+    tool = ToolDef(
+        name="hello_db", description="d", input_schema=ToolInputSchema(), handler=handler,
+    )
+    manifest = PluginManifest(
+        name="_hello", version="1", description="d", skills=[], type="internal",
+    )
+    plugin = LoadedPlugin(manifest=manifest, plugin_dir=Path("."), tools=[tool])
+
+    registry = PluginRegistry(plugins_dir=Path("."))
+    registry.register(plugin)
+
+    fake_session = MagicMock(name="AsyncSession")
+    executor = ToolExecutor(registry=registry)
+    await executor.execute(
+        ToolCall(id="tc1", name="hello_db", arguments={}),
+        user=None,
+        db=fake_session,
+    )
+
+    assert captured["db"] is fake_session

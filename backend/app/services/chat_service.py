@@ -1,11 +1,14 @@
 import json
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.engine.base import ChatMessage, LLMProvider, ToolResult
 from app.engine.tool_executor import ToolExecutor
 from app.models.user import User
 from app.plugins.core.registry import PluginRegistry
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 from .context_builder import build_system_prompt
 
@@ -52,6 +55,7 @@ class ChatService:
         self,
         conversation: list[ChatMessage],
         user: User | None = None,
+        db: "AsyncSession | None" = None,
     ) -> ChatReply:
         """Run the LLM + tool loop and return the final assistant reply.
 
@@ -109,7 +113,7 @@ class ChatService:
 
             results: list[ToolResult] = []
             for call in response.tool_calls:
-                result = await self.tool_executor.execute(call, user=user)
+                result = await self.tool_executor.execute(call, user=user, db=db)
                 results.append(result)
 
                 event = {"name": call.name, "arguments": call.arguments}

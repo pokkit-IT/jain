@@ -10,6 +10,7 @@ from .base import ToolCall, ToolResult
 
 if TYPE_CHECKING:
     from app.models.user import User
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class ToolExecutor:
@@ -30,7 +31,10 @@ class ToolExecutor:
             self._http = None
 
     async def execute(
-        self, call: ToolCall, user: "User | None" = None
+        self,
+        call: ToolCall,
+        user: "User | None" = None,
+        db: "AsyncSession | None" = None,
     ) -> ToolResult:
         plugin, tool = self.registry.find_tool(call.name)
         if plugin is None or tool is None:
@@ -70,7 +74,7 @@ class ToolExecutor:
                     }),
                 )
             try:
-                payload = await tool.handler(call.arguments, user=user, db=None)
+                payload = await tool.handler(call.arguments, user=user, db=db)
             except Exception as e:
                 return ToolResult(
                     tool_call_id=call.id,

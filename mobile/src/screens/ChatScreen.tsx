@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { AuthPrompt } from "../chat/AuthPrompt";
 import { DataCard } from "../chat/DataCard";
@@ -32,6 +33,18 @@ export function ChatScreen() {
   const activeComponent = useAppStore((s) => s.activeComponent);
   const hideComponent = useAppStore((s) => s.hideComponent);
 
+  // Refocus the TextInput every time the Jain tab gains focus. Bottom-tab
+  // navigator keeps screens mounted across tab switches, so `autoFocus`
+  // only fires on first mount — this handles return visits.
+  useFocusEffect(
+    useCallback(() => {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }, []),
+  );
+
   const onSend = async () => {
     const text = input.trim();
     setInput("");
@@ -40,6 +53,22 @@ export function ChatScreen() {
     // Refocus the input so the user can keep typing without tapping back.
     inputRef.current?.focus();
   };
+
+  // Called by <AuthPrompt /> after a successful sign-in. Reads the
+  // pending retry from the store and invokes send() directly — no
+  // useEffect closure race.
+  const handleSignInComplete = useCallback(() => {
+    const store = useAppStore.getState();
+    const pending = store.pendingRetry;
+    console.log("[ChatScreen] sign-in complete, pendingRetry =", pending?.slice(0, 40));
+    if (!pending) return;
+    store.clearPendingRetry();
+    // Give React a beat to propagate the session change before firing
+    // the retry (the axios interceptor reads the token at request time).
+    setTimeout(() => {
+      void send(pending);
+    }, 50);
+  }, [send]);
 
   return (
     <KeyboardAvoidingView
@@ -54,7 +83,9 @@ export function ChatScreen() {
         renderItem={({ item }) => <MessageBubble role={item.role} content={item.content} />}
         contentContainerStyle={styles.list}
       />
-      {lastResponse?.display_hint === "auth_required" ? <AuthPrompt /> : null}
+      {lastResponse?.display_hint === "auth_required" ? (
+        <AuthPrompt onSignInComplete={handleSignInComplete} />
+      ) : null}
       {lastResponse?.display_hint &&
       lastResponse.display_hint !== "auth_required" &&
       lastResponse.data ? (

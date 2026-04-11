@@ -21,13 +21,16 @@ interface AppState {
   showComponent: (plugin: string, name: string, props?: unknown) => void;
   hideComponent: () => void;
 
-  // Per-plugin auth state. Layer 1: hardcoded false until login UI lands.
-  auth: Record<string, boolean>;
-  setPluginAuth: (plugin: string, authenticated: boolean) => void;
-
   // Phase 2A: real JAIN session (Google OAuth). Null when signed out.
   session: Session | null;
   setSession: (session: Session | null) => void;
+
+  // Phase 2B: pending user message that needs to be auto-retried after sign-in.
+  // Set by useChat when an auth_required response comes back. Cleared on manual
+  // send and on successful retry.
+  pendingRetry: string | null;
+  setPendingRetry: (message: string | null) => void;
+  clearPendingRetry: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -62,13 +65,12 @@ export const useAppStore = create<AppState>((set) => ({
     set({ activeComponent: { plugin, name, props } }),
   hideComponent: () => set({ activeComponent: null }),
 
-  // Layer 1: yardsailing auth defaults to false until we add a login flow.
-  // Jain reads this via the chat request and prompts the user accordingly.
-  auth: { yardsailing: false },
-  setPluginAuth: (plugin, authenticated) =>
-    set((s) => ({ auth: { ...s.auth, [plugin]: authenticated } })),
-
   // Phase 2A: real JAIN session (Google OAuth). Null when signed out.
   session: null,
   setSession: (session) => set({ session }),
+
+  // Phase 2B: pending user message for auto-retry after sign-in.
+  pendingRetry: null,
+  setPendingRetry: (message) => set({ pendingRetry: message }),
+  clearPendingRetry: () => set({ pendingRetry: null }),
 }));

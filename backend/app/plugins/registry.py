@@ -41,3 +41,15 @@ class PluginRegistry:
                 key = f"{plugin.manifest.name}.{skill.name}"
                 out[key] = skill.description
         return out
+
+    def register(self, plugin: LoadedPlugin) -> None:
+        """Add a plugin to the in-memory registry at runtime.
+
+        Used by the external loader on startup and by POST /api/plugins/install.
+        Overwrites any existing plugin with the same name.
+        """
+        self._plugins[plugin.manifest.name] = plugin
+
+    def unregister(self, name: str) -> None:
+        """Remove a plugin from the registry. No-op if the name is unknown."""
+        self._plugins.pop(name, None)

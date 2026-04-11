@@ -1,6 +1,8 @@
 from pathlib import Path
 
+from app.plugins.loader import LoadedPlugin
 from app.plugins.registry import PluginRegistry
+from app.plugins.schema import PluginManifest
 
 FIXTURES = Path(__file__).parent / "fixtures" / "plugins"
 
@@ -46,3 +48,32 @@ def test_registry_skill_descriptions():
     assert "yardsailing.find-sales" in descs
     assert "small-talk.chat" in descs
     assert "yard sales" in descs["yardsailing.find-sales"].lower()
+
+
+def test_registry_register_adds_plugin(tmp_path):
+    r = PluginRegistry(plugins_dir=tmp_path)
+    manifest = PluginManifest(
+        name="dynamic", version="1", description="d", skills=[],
+    )
+    loaded = LoadedPlugin(manifest=manifest, plugin_dir=tmp_path)
+    r.register(loaded)
+
+    assert r.get_plugin("dynamic") is loaded
+    assert "dynamic" in [p.name for p in r.list_plugins()]
+
+
+def test_registry_unregister_removes_plugin(tmp_path):
+    r = PluginRegistry(plugins_dir=tmp_path)
+    manifest = PluginManifest(
+        name="dynamic", version="1", description="d", skills=[],
+    )
+    r.register(LoadedPlugin(manifest=manifest, plugin_dir=tmp_path))
+    r.unregister("dynamic")
+
+    assert r.get_plugin("dynamic") is None
+    assert "dynamic" not in [p.name for p in r.list_plugins()]
+
+
+def test_registry_unregister_missing_name_is_noop(tmp_path):
+    r = PluginRegistry(plugins_dir=tmp_path)
+    r.unregister("never-existed")  # must not raise

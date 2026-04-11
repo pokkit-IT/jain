@@ -38,3 +38,9 @@ def _chat_service_singleton() -> ChatService:
 
 def get_chat_service() -> ChatService:
     return _chat_service_singleton()
+
+
+def reset_registry_for_tests() -> None:
+    """Clear the cached registry singleton. Tests only."""
+    _registry_singleton.cache_clear()
+    _chat_service_singleton.cache_clear()

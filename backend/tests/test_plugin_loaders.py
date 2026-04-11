@@ -39,3 +39,39 @@ def test_external_loader_reads_existing_filesystem_path(tmp_path):
     names = [p.name for p in registry.list_plugins()]
     # The exact fixture set varies — at minimum, some external plugin should load.
     assert len(names) >= 1
+
+
+def test_get_registry_runs_both_loaders(monkeypatch, tmp_path):
+    """get_registry() should invoke both InternalPluginLoader.load_all
+    and ExternalPluginLoader.load_all on the shared registry."""
+    from app import dependencies
+    from app.plugins.core.registry import PluginRegistry
+
+    dependencies.reset_registry_for_tests()
+    monkeypatch.setattr(dependencies.settings, "PLUGINS_DIR", str(tmp_path))
+
+    internal_called = {"v": False}
+    external_called = {"v": False}
+
+    real_internal = dependencies.InternalPluginLoader
+    real_external = dependencies.ExternalPluginLoader
+
+    class SpyInternal(real_internal):
+        def load_all(self, registry: PluginRegistry) -> None:
+            internal_called["v"] = True
+            return super().load_all(registry)
+
+    class SpyExternal(real_external):
+        def load_all(self, registry: PluginRegistry) -> None:
+            external_called["v"] = True
+            return super().load_all(registry)
+
+    monkeypatch.setattr(dependencies, "InternalPluginLoader", SpyInternal)
+    monkeypatch.setattr(dependencies, "ExternalPluginLoader", SpyExternal)
+
+    dependencies.get_registry()
+
+    assert internal_called["v"]
+    assert external_called["v"]
+
+    dependencies.reset_registry_for_tests()

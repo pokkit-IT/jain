@@ -31,6 +31,22 @@ def create_app() -> FastAPI:
     app.include_router(plugins.router)
     app.include_router(settings_router.router)
     app.include_router(auth.router)
+
+    # Phase 3: mount internal plugin routers. get_registry() loads both
+    # internal and external plugins (external are HTTP services with no
+    # router — skip them). Each internal plugin's router has its own
+    # /api/plugins/<name>/... prefix baked in.
+    from .dependencies import get_registry
+    registry = get_registry()
+    for plugin in registry.list_plugins():
+        if plugin.type != "internal":
+            continue
+        loaded = registry.get_plugin(plugin.name)
+        registration = getattr(loaded, "registration", None)
+        if registration is None or registration.router is None:
+            continue
+        app.include_router(registration.router)
+
     return app
 
 

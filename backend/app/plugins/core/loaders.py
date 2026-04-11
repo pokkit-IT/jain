@@ -108,4 +108,8 @@ class ExternalPluginLoader:
             # where type defaults to external).
             if plugin.manifest.type != "external":
                 continue
+            # Don't overwrite a plugin that was already registered as internal.
+            existing = registry.get_plugin(plugin.manifest.name)
+            if existing is not None and existing.manifest.type == "internal":
+                continue
             registry.register(plugin)

@@ -1,6 +1,7 @@
+from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ToolInputSchema(BaseModel):
@@ -10,6 +11,8 @@ class ToolInputSchema(BaseModel):
 
 
 class ToolDef(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     name: str
     description: str
     input_schema: ToolInputSchema
@@ -27,6 +30,10 @@ class ToolDef(BaseModel):
     # the tool's arguments as its initial props. Used for things like
     # "show the sale creation form" where no backend work is needed.
     ui_component: str | None = None
+    # Phase 3: when set, the tool executor calls this Python callable
+    # directly instead of making an HTTP request. Used by internal plugins.
+    # Signature: async def handler(args: dict, user: User | None, db: AsyncSession) -> Any
+    handler: Callable[..., Awaitable[Any]] | None = Field(default=None, exclude=True)
 
 
 class SkillDef(BaseModel):

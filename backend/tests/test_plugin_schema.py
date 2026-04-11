@@ -83,3 +83,18 @@ def test_plugin_manifest_type_rejects_garbage():
         PluginManifest(
             name="x", version="1", description="d", skills=[], type="totally-wrong",
         )
+
+
+def test_tool_def_handler_defaults_to_none():
+    t = ToolDef(name="x", description="d", input_schema=ToolInputSchema())
+    assert t.handler is None
+
+
+def test_tool_def_handler_accepts_async_callable():
+    async def h(args, user=None, db=None):
+        return {"ok": True}
+
+    t = ToolDef(
+        name="x", description="d", input_schema=ToolInputSchema(), handler=h,
+    )
+    assert t.handler is h

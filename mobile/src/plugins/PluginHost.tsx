@@ -25,12 +25,32 @@ async function loadBundle(pluginName: string, bundlePath: string): Promise<void>
   );
 
   // Evaluate with a minimal require shim. Bundles are built with esbuild
-  // external: ["react", "react-native"] so they only request these modules.
+  // external: ["react", "react-native"] and jsx: "transform" (classic
+  // runtime), so they only request these modules at runtime. If a future
+  // plugin is built with jsx: "automatic", it will also request
+  // "react/jsx-runtime" — shimmed here too for safety.
   const reactModule = require("react");
   const rnModule = require("react-native");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  let jsxRuntimeModule: unknown;
+  try {
+    jsxRuntimeModule = require("react/jsx-runtime");
+  } catch {
+    // Metro may not include jsx-runtime in the bundle. That's OK —
+    // classic-runtime plugins don't need it.
+    jsxRuntimeModule = undefined;
+  }
   const shim = (mod: string) => {
     if (mod === "react") return reactModule;
     if (mod === "react-native") return rnModule;
+    if (mod === "react/jsx-runtime" || mod === "react/jsx-dev-runtime") {
+      if (jsxRuntimeModule) return jsxRuntimeModule;
+      throw new Error(
+        `plugin bundle requested "${mod}" but Metro did not include it. ` +
+          `Rebuild the plugin with esbuild option { jsx: "transform" } to use ` +
+          `the classic runtime.`,
+      );
+    }
     throw new Error(`plugin bundle requested unknown module "${mod}"`);
   };
 

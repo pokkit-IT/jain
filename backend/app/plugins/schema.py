@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -50,6 +50,7 @@ class PluginManifest(BaseModel):
     version: str
     description: str
     author: str = ""
+    type: Literal["internal", "external"] = "external"
     skills: list[SkillDef]
     components: PluginComponents | None = None
     api: PluginApi | None = None

@@ -62,3 +62,32 @@ def test_manifest_parses_full():
 def test_manifest_requires_name():
     with pytest.raises(ValidationError):
         PluginManifest.model_validate({"version": "1.0.0", "description": "x", "skills": []})
+
+
+def test_plugin_manifest_type_defaults_to_external():
+    from app.plugins.schema import PluginManifest
+
+    m = PluginManifest(
+        name="w", version="1", description="d", skills=[],
+    )
+    assert m.type == "external"
+
+
+def test_plugin_manifest_type_accepts_internal():
+    from app.plugins.schema import PluginManifest
+
+    m = PluginManifest(
+        name="y", version="1", description="d", skills=[], type="internal",
+    )
+    assert m.type == "internal"
+
+
+def test_plugin_manifest_type_rejects_garbage():
+    import pytest
+    from pydantic import ValidationError
+    from app.plugins.schema import PluginManifest
+
+    with pytest.raises(ValidationError):
+        PluginManifest(
+            name="x", version="1", description="d", skills=[], type="totally-wrong",
+        )

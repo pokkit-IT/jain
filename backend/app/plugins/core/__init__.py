@@ -8,6 +8,7 @@ from .schema import (
     ToolDef,
     ToolInputSchema,
 )
+from .types import PluginRegistration
 
 __all__ = [
     "LoadedPlugin",
@@ -17,6 +18,7 @@ __all__ = [
     "PluginApi",
     "PluginComponents",
     "PluginManifest",
+    "PluginRegistration",
     "SkillDef",
     "ToolDef",
     "ToolInputSchema",

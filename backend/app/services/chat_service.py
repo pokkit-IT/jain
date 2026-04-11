@@ -139,6 +139,19 @@ class ChatService:
                         tool_events=tool_events,
                     )
 
+                # Phase 2B: client-side UI tool result. Set display_hint
+                # to "component:<name>" and pass the initial_data as the
+                # reply data so the frontend can render the component with
+                # the tool's arguments as initial props.
+                if (
+                    isinstance(parsed, dict)
+                    and parsed.get("__source") == "jain_executor_ui"
+                    and parsed.get("__display_component")
+                ):
+                    last_data = parsed.get("initial_data", {})
+                    last_display_hint = f"component:{parsed['__display_component']}"
+                    continue
+
                 is_error = isinstance(parsed, dict) and parsed.get("error")
                 if parsed is not None and not is_error:
                     plugin, _ = self.registry.find_tool(call.name)

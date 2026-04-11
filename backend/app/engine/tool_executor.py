@@ -39,6 +39,22 @@ class ToolExecutor:
                 content=json.dumps({"error": f"tool '{call.name}' not found"}),
             )
 
+        # Phase 2B: client-side UI tools don't make HTTP calls. They emit
+        # a synthetic result with a __display_component marker that the
+        # chat service translates into display_hint: "component:<name>".
+        # Used when Jain needs to trigger a plugin-provided React component
+        # (form, map overlay, etc.) without a backend round-trip.
+        if tool.ui_component:
+            return ToolResult(
+                tool_call_id=call.id,
+                content=json.dumps({
+                    "__display_component": tool.ui_component,
+                    "__source": "jain_executor_ui",
+                    "plugin": plugin.manifest.name,
+                    "initial_data": call.arguments,
+                }),
+            )
+
         if plugin.manifest.api is None:
             return ToolResult(
                 tool_call_id=call.id,

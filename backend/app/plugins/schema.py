@@ -21,6 +21,12 @@ class ToolDef(BaseModel):
     # unless the user is authenticated. Anonymous callers get a synthetic
     # auth_required error instead of an upstream HTTP call.
     auth_required: bool = False
+    # Phase 2B: when set, the tool is a "client-side UI tool". Instead of
+    # making an HTTP call to the plugin, the executor returns a synthetic
+    # result that instructs the frontend to render the named component with
+    # the tool's arguments as its initial props. Used for things like
+    # "show the sale creation form" where no backend work is needed.
+    ui_component: str | None = None
 
 
 class SkillDef(BaseModel):

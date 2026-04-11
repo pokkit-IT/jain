@@ -259,3 +259,48 @@ async def test_execute_skips_user_headers_when_service_key_empty(registry, httpx
         assert "x-jain-user-name" not in sent.headers
     finally:
         settings.JAIN_SERVICE_KEY = original_key
+
+
+async def test_execute_ui_component_tool_returns_synthetic_result(registry):
+    """When tool.ui_component is set, the executor returns a synthetic
+    __display_component marker without making any HTTP call. Used for
+    client-side UI triggers like 'show the sale form'."""
+    from uuid import uuid4
+    from app.models.user import User
+
+    _, tool = registry.find_tool("find_yard_sales")
+    tool.ui_component = "SaleForm"
+
+    try:
+        executor = ToolExecutor(registry=registry)
+        result = await executor.execute(
+            ToolCall(id="tc1", name="find_yard_sales", arguments={"title": "Big Sale", "address": "123 Main"}),
+            user=User(id=uuid4(), email="u@x.com", name="U", email_verified=True, google_sub="g"),
+        )
+        assert result.tool_call_id == "tc1"
+        payload = json.loads(result.content)
+        assert payload["__display_component"] == "SaleForm"
+        assert payload["__source"] == "jain_executor_ui"
+        assert payload["plugin"] == "yardsailing"
+        assert payload["initial_data"] == {"title": "Big Sale", "address": "123 Main"}
+    finally:
+        tool.ui_component = None
+
+
+async def test_execute_ui_component_tool_works_for_anonymous_user(registry):
+    """UI component tools work even for anonymous users (they're client-
+    side and don't touch plugin HTTP endpoints, so there's nothing to
+    gate). Auth gating only applies to real HTTP tools."""
+    _, tool = registry.find_tool("find_yard_sales")
+    tool.ui_component = "SaleForm"
+
+    try:
+        executor = ToolExecutor(registry=registry)
+        result = await executor.execute(
+            ToolCall(id="tc1", name="find_yard_sales", arguments={}),
+            user=None,
+        )
+        payload = json.loads(result.content)
+        assert payload["__display_component"] == "SaleForm"
+    finally:
+        tool.ui_component = None

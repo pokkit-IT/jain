@@ -359,3 +359,44 @@ async def test_chat_service_does_not_short_circuit_on_plugin_returned_auth_requi
         assert len(provider.calls) == 2
     finally:
         settings.JAIN_SERVICE_KEY = original_key
+
+
+async def test_chat_service_sets_component_hint_for_ui_tool(registry):
+    """When a tool is marked ui_component, the chat service translates the
+    synthetic __display_component marker into display_hint='component:<name>'
+    with the initial_data as the reply data."""
+    _, tool = registry.find_tool("find_yard_sales")
+    tool.ui_component = "SaleForm"
+
+    try:
+        provider = MockProvider(
+            responses=[
+                LLMResponse(
+                    text="Here's a form",
+                    tool_calls=[
+                        ToolCall(
+                            id="tc1",
+                            name="find_yard_sales",
+                            arguments={"title": "My Sale", "address": "123 Oak"},
+                        )
+                    ],
+                ),
+                LLMResponse(text="Fill it in", tool_calls=[]),
+            ]
+        )
+        service = ChatService(
+            registry=registry,
+            provider=provider,
+            tool_executor=ToolExecutor(registry=registry),
+        )
+
+        reply = await service.send(
+            conversation=[ChatMessage(role="user", content="give me a form")],
+            user=None,
+        )
+
+        assert reply.display_hint == "component:SaleForm"
+        assert reply.data == {"title": "My Sale", "address": "123 Oak"}
+        assert reply.text == "Fill it in"
+    finally:
+        tool.ui_component = None

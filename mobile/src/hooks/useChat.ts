@@ -73,7 +73,20 @@ export function useChat() {
 
       if (res.display_hint?.startsWith("component:")) {
         const [, name] = res.display_hint.split(":");
-        const owner = store.plugins.find((p) => p.components?.exports.includes(name));
+        // Read plugins fresh from the store — it may have been populated
+        // after this closure was captured (e.g. App.tsx loads them async).
+        const currentPlugins = useAppStore.getState().plugins;
+        const owner = currentPlugins.find((p) =>
+          p.components?.exports.includes(name),
+        );
+        console.log(
+          "[useChat] component:",
+          name,
+          "owner:",
+          owner?.name ?? "<NOT FOUND>",
+          "plugins loaded:",
+          currentPlugins.map((p) => p.name),
+        );
         if (owner) showComponent(owner.name, name, res.data ?? undefined);
       }
     } catch (e) {

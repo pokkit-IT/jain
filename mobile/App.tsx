@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 
 import { fetchCurrentUser } from "./src/api/auth";
+import { listPlugins } from "./src/api/plugins";
 import { clearToken, getToken } from "./src/auth/tokenStorage";
 import { useAppStore } from "./src/store/useAppStore";
 import { ChatScreen } from "./src/screens/ChatScreen";
@@ -36,8 +37,25 @@ function useHydrateSession() {
   }, [setSession]);
 }
 
+function useHydratePlugins() {
+  const setPlugins = useAppStore((s) => s.setPlugins);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const plugins = await listPlugins();
+        setPlugins(plugins);
+        console.log("[App] loaded plugins:", plugins.map((p) => p.name));
+      } catch (e) {
+        console.log("[App] failed to load plugins:", (e as Error).message);
+      }
+    })();
+  }, [setPlugins]);
+}
+
 export default function App() {
   useHydrateSession();
+  useHydratePlugins();
 
   return (
     <SafeAreaProvider>

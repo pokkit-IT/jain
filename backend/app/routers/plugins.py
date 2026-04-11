@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 from urllib.parse import quote
 
@@ -42,6 +43,9 @@ async def get_plugin_bundle(
     return bundle_path.read_text(encoding="utf-8")
 
 
+_log = logging.getLogger("jain.plugins.proxy")
+
+
 @router.post("/{plugin_name}/call")
 async def call_plugin_api(
     plugin_name: str,
@@ -76,10 +80,21 @@ async def call_plugin_api(
     # Build headers the same way the tool executor does (Phase 2B auth
     # pass-through via service key + URL-encoded user identity).
     headers = {"X-Requested-With": "XMLHttpRequest", "Content-Type": "application/json"}
+    auth_applied = False
     if user is not None and settings.JAIN_SERVICE_KEY:
         headers["X-Jain-Service-Key"] = settings.JAIN_SERVICE_KEY
         headers["X-Jain-User-Email"] = quote(user.email, safe="@")
         headers["X-Jain-User-Name"] = quote(user.name, safe="")
+        auth_applied = True
+
+    _log.info(
+        "proxy call: %s %s user=%s auth_applied=%s service_key_configured=%s",
+        method,
+        url,
+        user.email if user else "<anonymous>",
+        auth_applied,
+        bool(settings.JAIN_SERVICE_KEY),
+    )
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
@@ -88,10 +103,29 @@ async def call_plugin_api(
             else:
                 resp = await client.request(method, url, json=req.body, headers=headers)
         except httpx.RequestError as e:
+            _log.warning("proxy request failed: %s: %s", type(e).__name__, e)
             raise HTTPException(
                 status_code=502,
                 detail=f"plugin request failed: {type(e).__name__}: {e}",
             )
+
+    _log.info(
+        "proxy response: %s %s -> %s (%d bytes)",
+        method,
+        url,
+        resp.status_code,
+        len(resp.content),
+    )
+    if resp.status_code >= 400:
+        # Log the upstream body on errors so we can see what the plugin said.
+        try:
+            _log.warning(
+                "proxy upstream %d body: %s",
+                resp.status_code,
+                resp.text[:500],
+            )
+        except Exception:
+            pass
 
     # Forward the plugin's response back to the mobile client verbatim.
     # Keep status code intact so 401s, 422s, etc. propagate correctly.

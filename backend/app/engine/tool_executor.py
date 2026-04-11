@@ -55,6 +55,35 @@ class ToolExecutor:
                 }),
             )
 
+        # Phase 3: internal plugins have a Python handler set on the tool.
+        # Call it directly instead of making an HTTP request. Auth gating
+        # still applies — internal handlers receive user=None for anonymous
+        # callers and the auth_required flag short-circuits the call.
+        if tool.handler is not None:
+            if tool.auth_required and user is None:
+                return ToolResult(
+                    tool_call_id=call.id,
+                    content=json.dumps({
+                        "error": "auth_required",
+                        "plugin": plugin.manifest.name,
+                        "__source": "jain_executor_gate",
+                    }),
+                )
+            try:
+                payload = await tool.handler(call.arguments, user=user, db=None)
+            except Exception as e:
+                return ToolResult(
+                    tool_call_id=call.id,
+                    content=json.dumps({
+                        "error": f"handler failed: {type(e).__name__}",
+                        "detail": str(e),
+                    }),
+                )
+            return ToolResult(
+                tool_call_id=call.id,
+                content=json.dumps(payload) if not isinstance(payload, str) else payload,
+            )
+
         if plugin.manifest.api is None:
             return ToolResult(
                 tool_call_id=call.id,

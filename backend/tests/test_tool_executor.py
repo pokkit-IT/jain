@@ -304,3 +304,46 @@ async def test_execute_ui_component_tool_works_for_anonymous_user(registry):
         assert payload["__display_component"] == "SaleForm"
     finally:
         tool.ui_component = None
+
+
+async def test_execute_calls_handler_for_internal_tool():
+    """When tool.handler is set, the executor invokes it as an async
+    function instead of making an HTTP call."""
+    import json
+    from pathlib import Path
+
+    from app.engine.base import ToolCall
+    from app.engine.tool_executor import ToolExecutor
+    from app.plugins.core.loader import LoadedPlugin
+    from app.plugins.core.registry import PluginRegistry
+    from app.plugins.core.schema import PluginManifest, ToolDef, ToolInputSchema
+
+    called = {}
+
+    async def handler(args, user=None, db=None):
+        called["args"] = args
+        called["user"] = user
+        return {"greeting": "hi"}
+
+    tool = ToolDef(
+        name="hello_world",
+        description="hi",
+        input_schema=ToolInputSchema(),
+        handler=handler,
+    )
+    manifest = PluginManifest(
+        name="_hello", version="1", description="d", skills=[], type="internal",
+    )
+    plugin = LoadedPlugin(manifest=manifest, plugin_dir=Path("."), tools=[tool])
+
+    registry = PluginRegistry(plugins_dir=Path("."))
+    registry.register(plugin)
+
+    executor = ToolExecutor(registry=registry)
+    result = await executor.execute(
+        ToolCall(id="tc1", name="hello_world", arguments={"who": "world"}),
+        user=None,
+    )
+
+    assert called["args"] == {"who": "world"}
+    assert json.loads(result.content) == {"greeting": "hi"}

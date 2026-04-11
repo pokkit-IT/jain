@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
 
+import { AuthPrompt } from "../chat/AuthPrompt";
 import { DataCard } from "../chat/DataCard";
 import { MessageBubble } from "../chat/MessageBubble";
 import { ToolIndicator } from "../chat/ToolIndicator";
@@ -50,7 +51,10 @@ export function ChatScreen() {
         renderItem={({ item }) => <MessageBubble role={item.role} content={item.content} />}
         contentContainerStyle={styles.list}
       />
-      {lastResponse?.display_hint && lastResponse.data ? (
+      {lastResponse?.display_hint === "auth_required" ? <AuthPrompt /> : null}
+      {lastResponse?.display_hint &&
+      lastResponse.display_hint !== "auth_required" &&
+      lastResponse.data ? (
         <DataCard displayHint={lastResponse.display_hint} data={lastResponse.data} />
       ) : null}
       <ToolIndicator visible={sending} />

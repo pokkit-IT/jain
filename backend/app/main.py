@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .database import init_db
-from .routers import auth, chat, health, plugins
+from .routers import auth, chat, health, plugins, plugins_admin
 from .routers import settings as settings_router
 
 
@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
     app.include_router(plugins.router)
     app.include_router(settings_router.router)
     app.include_router(auth.router)
+    app.include_router(plugins_admin.router)
 
     # Phase 3: mount internal plugin routers. get_registry() loads both
     # internal and external plugins (external are HTTP services with no

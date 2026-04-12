@@ -1,6 +1,7 @@
 import { ResponseType } from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import { Platform } from "react-native";
 
 // Required by expo-web-browser when returning from the OAuth redirect.
 WebBrowser.maybeCompleteAuthSession();
@@ -31,10 +32,12 @@ export function useGoogleSignIn(): {
     androidClientId: ANDROID_CLIENT_ID || undefined,
     webClientId: WEB_CLIENT_ID || undefined,
     scopes: ["openid", "email", "profile"],
-    // Request an OIDC ID token (JWT) — our backend verifies this against
-    // Google's public keys. The default (Token) only returns an access_token
-    // for calling Google APIs, which isn't useful for identity.
-    responseType: ResponseType.IdToken,
+    // Web: force IdToken response type (implicit flow) — the default on web
+    // only returns an access_token which isn't useful for identity.
+    // Native iOS/Android: omit responseType so expo-auth-session uses the
+    // authorization code flow, which Google requires for native apps. The
+    // id_token comes back via result.authentication.idToken instead.
+    ...(Platform.OS === "web" ? { responseType: ResponseType.IdToken } : {}),
     // Force Google to show the account picker. Without this, Google
     // auto-approves the request if the user already has an active session,
     // redirecting the popup so fast that Chrome's Cross-Origin-Opener-Policy
@@ -49,8 +52,11 @@ export function useGoogleSignIn(): {
     if (!request) return null;
     const result = await promptAsync();
     if (result?.type !== "success") return null;
-    // The ID token is in result.params.id_token for the Google provider.
-    const idToken = (result.params as { id_token?: string }).id_token;
+    // Web (implicit flow): id_token is in result.params.id_token
+    // Native (code exchange): id_token is in result.authentication.idToken
+    const idToken =
+      (result as any).authentication?.idToken ??
+      (result.params as { id_token?: string }).id_token;
     return idToken ?? null;
   };
 

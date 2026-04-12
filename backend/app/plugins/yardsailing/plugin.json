@@ -6,6 +6,11 @@
   "type": "internal",
   "skills": [
     {
+      "name": "find-sales",
+      "description": "Find yard sales near a location. Use when user asks about sales, garage sales, or estate sales nearby.",
+      "tools": ["find_yard_sales"]
+    },
+    {
       "name": "create-sale",
       "description": "Help user create a yard sale listing. Gather info conversationally or present a form.",
       "tools": ["create_yard_sale", "show_sale_form"],

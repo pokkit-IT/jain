@@ -45,5 +45,13 @@ async def list_sales_for_owner(db: AsyncSession, user: User) -> list[Sale]:
     return list(result.scalars().all())
 
 
+async def list_recent_sales(db: AsyncSession, limit: int = 50) -> list[Sale]:
+    """All sales, most recent first. No geo filtering yet — returns everything."""
+    result = await db.execute(
+        select(Sale).order_by(Sale.created_at.desc()).limit(limit),
+    )
+    return list(result.scalars().all())
+
+
 async def get_sale_by_id(db: AsyncSession, sale_id: str) -> Sale | None:
     return await db.get(Sale, sale_id)

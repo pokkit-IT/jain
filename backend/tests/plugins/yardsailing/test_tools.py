@@ -28,9 +28,9 @@ async def session_and_user():
     await engine.dispose()
 
 
-def test_tools_list_has_both_tools():
+def test_tools_list_has_all_tools():
     names = {t.name for t in TOOLS}
-    assert names == {"create_yard_sale", "show_sale_form"}
+    assert names == {"find_yard_sales", "create_yard_sale", "show_sale_form"}
 
 
 def test_show_sale_form_is_ui_component():

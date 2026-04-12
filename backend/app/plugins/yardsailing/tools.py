@@ -9,7 +9,29 @@
 
 from app.plugins.core.schema import ToolDef, ToolInputSchema
 
-from .services import CreateSaleInput, create_sale
+from .services import CreateSaleInput, create_sale, list_recent_sales
+
+
+async def find_yard_sales_handler(args, user=None, db=None):
+    """Search for yard sales. Currently returns all recent sales (no geo
+    filtering — SQLite has no spatial support). A future phase can add
+    lat/lng to the Sale model and filter by distance."""
+    sales = await list_recent_sales(db, limit=50)
+    return {
+        "sales": [
+            {
+                "id": s.id,
+                "title": s.title,
+                "address": s.address,
+                "description": s.description,
+                "start_date": s.start_date,
+                "end_date": s.end_date,
+                "start_time": s.start_time,
+                "end_time": s.end_time,
+            }
+            for s in sales
+        ],
+    }
 
 
 async def create_yard_sale_handler(args, user=None, db=None):
@@ -34,6 +56,24 @@ async def create_yard_sale_handler(args, user=None, db=None):
 
 
 TOOLS: list[ToolDef] = [
+    ToolDef(
+        name="find_yard_sales",
+        description=(
+            "Search for yard sales. Use this when the user asks about sales "
+            "near them, wants to browse listings, or asks what yard sales are "
+            "happening. Returns a list of recent yard sale listings."
+        ),
+        input_schema=ToolInputSchema(
+            properties={
+                "query": {
+                    "type": "string",
+                    "description": "Optional search term to filter by (not yet implemented — returns all)",
+                },
+            },
+            required=[],
+        ),
+        handler=find_yard_sales_handler,
+    ),
     ToolDef(
         name="create_yard_sale",
         description=(

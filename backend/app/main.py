@@ -12,6 +12,16 @@ from .routers import settings as settings_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # Phase 3 Stage 4: load runtime-installed external plugins from the DB.
+    from .database import async_session
+    from .dependencies import get_registry
+    from .plugins.core.loaders import ExternalPluginLoader
+
+    registry = get_registry()
+    loader = ExternalPluginLoader(plugins_dir=settings.PLUGINS_DIR)
+    async with async_session() as db:
+        await loader.load_from_db(registry, db)
+
     yield
 
 

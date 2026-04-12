@@ -5,7 +5,7 @@ from .config import settings
 from .engine.anthropic_provider import AnthropicProvider
 from .engine.base import LLMProvider
 from .engine.tool_executor import ToolExecutor
-from .plugins.core.loaders import ExternalPluginLoader, InternalPluginLoader
+from .plugins.core.loaders import InternalPluginLoader
 from .plugins.core.registry import PluginRegistry
 from .services.chat_service import ChatService
 
@@ -16,9 +16,9 @@ def _registry_singleton() -> PluginRegistry:
     # Internal plugins live inside JAIN's own source tree.
     internal_dir = Path(__file__).parent / "plugins"
     InternalPluginLoader(plugins_dir=internal_dir).load_all(reg)
-    # External plugins: Stage 2 still reads the jain-plugins filesystem path.
-    # Stage 4 will replace this with DB-backed loading.
-    ExternalPluginLoader(plugins_dir=settings.PLUGINS_DIR).load_all(reg)
+    # Phase 3 Stage 4: external plugins are loaded from the installed_plugins
+    # table in the FastAPI lifespan context (see main.lifespan) because it
+    # needs an async DB session.
     return reg
 
 

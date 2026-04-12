@@ -38,6 +38,17 @@ class Settings(BaseSettings):
     # Set in .env; plugins (e.g. yardsailing) must be configured with the same value.
     JAIN_SERVICE_KEY: str = ""
 
+    # Phase 3: comma-separated list of admin emails, for plugin install/uninstall.
+    JAIN_ADMIN_EMAILS: str = ""
+
+    @property
+    def admin_emails(self) -> set[str]:
+        return {
+            e.strip().lower()
+            for e in self.JAIN_ADMIN_EMAILS.split(",")
+            if e.strip()
+        }
+
     # Database
     DATABASE_URL: str = f"sqlite+aiosqlite:///{_BACKEND_DIR}/jain.db"
 

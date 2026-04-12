@@ -49,14 +49,20 @@ export function useGoogleSignIn(): {
   });
 
   const signIn = async (): Promise<string | null> => {
+    console.log("[googleAuth] signIn called, request ready:", !!request, "platform:", Platform.OS);
+    console.log("[googleAuth] IOS_CLIENT_ID:", IOS_CLIENT_ID ? IOS_CLIENT_ID.slice(0, 20) + "..." : "EMPTY");
     if (!request) return null;
     const result = await promptAsync();
+    console.log("[googleAuth] promptAsync result type:", result?.type);
+    console.log("[googleAuth] result.authentication:", JSON.stringify((result as any).authentication, null, 2)?.slice(0, 200));
+    console.log("[googleAuth] result.params:", JSON.stringify(result?.params, null, 2)?.slice(0, 200));
     if (result?.type !== "success") return null;
     // Web (implicit flow): id_token is in result.params.id_token
     // Native (code exchange): id_token is in result.authentication.idToken
     const idToken =
       (result as any).authentication?.idToken ??
       (result.params as { id_token?: string }).id_token;
+    console.log("[googleAuth] extracted idToken:", idToken ? idToken.slice(0, 20) + "..." : "NULL");
     return idToken ?? null;
   };
 

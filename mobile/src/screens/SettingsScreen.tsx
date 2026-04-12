@@ -53,16 +53,20 @@ export function SettingsScreen() {
   const handleSignIn = async () => {
     if (signingIn) return;
     setSigningIn(true);
+    console.log("[Settings] handleSignIn started");
     try {
       const idToken = await googleSignIn();
+      console.log("[Settings] googleSignIn returned, idToken:", idToken ? idToken.slice(0, 20) + "..." : "NULL");
       if (!idToken) {
-        // User cancelled or something went wrong with Google flow
+        console.log("[Settings] no idToken — user cancelled or flow failed");
         return;
       }
       const newSession = await signInWithGoogle(idToken);
+      console.log("[Settings] signInWithGoogle succeeded, user:", newSession.user?.email);
       await setToken(newSession.token);
       setSession(newSession);
     } catch (e) {
+      console.log("[Settings] sign-in error:", (e as Error).message, e);
       Alert.alert("Sign-in failed", (e as Error).message || "Try again later.");
     } finally {
       setSigningIn(false);

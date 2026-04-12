@@ -31,6 +31,11 @@ async function loadBundle(pluginName: string, bundlePath: string): Promise<void>
   // "react/jsx-runtime" — shimmed here too for safety.
   const reactModule = require("react");
   const rnModule = require("react-native");
+  // esbuild's ESM interop generates `import_react.default.createElement()`
+  // for JSX, but CJS modules have no `.default`. Add a self-reference so
+  // both `mod.useState` (named) and `mod.default.createElement` (default) work.
+  if (!reactModule.default) reactModule.default = reactModule;
+  if (!rnModule.default) rnModule.default = rnModule;
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   let jsxRuntimeModule: unknown;
   try {

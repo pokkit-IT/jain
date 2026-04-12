@@ -17,7 +17,7 @@ await build({
   outfile,
   format: "iife",
   platform: "neutral",
-  target: "es2020",
+  target: "es2016",
   jsx: "transform",
   external: ["react", "react-native"],
   loader: { ".tsx": "tsx", ".ts": "ts" },

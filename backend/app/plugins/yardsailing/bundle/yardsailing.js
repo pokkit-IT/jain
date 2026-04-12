@@ -188,4 +188,10 @@
     },
     successText: { color: "#065f46", fontSize: 14, fontWeight: "500" }
   });
+
+  // components/index.ts
+  globalThis.JainPlugins = globalThis.JainPlugins || {};
+  globalThis.JainPlugins.yardsailing = {
+    SaleForm
+  };
 })();

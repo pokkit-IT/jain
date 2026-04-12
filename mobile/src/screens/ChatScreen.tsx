@@ -14,6 +14,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { AuthPrompt } from "../chat/AuthPrompt";
+import { ChoiceButtons } from "../chat/ChoiceButtons";
 import { DataCard } from "../chat/DataCard";
 import { MessageBubble } from "../chat/MessageBubble";
 import { ToolIndicator } from "../chat/ToolIndicator";
@@ -32,6 +33,7 @@ export function ChatScreen() {
   const headerHeight = useHeaderHeight();
 
   const activeComponent = useAppStore((s) => s.activeComponent);
+  const activeChoices = useAppStore((s) => s.activeChoices);
   const hideComponent = useAppStore((s) => s.hideComponent);
   const setPlugins = useAppStore((s) => s.setPlugins);
 
@@ -62,6 +64,15 @@ export function ChatScreen() {
     // Refocus the input so the user can keep typing without tapping back.
     inputRef.current?.focus();
   };
+
+  const onChoice = useCallback(
+    (label: string) => {
+      setInput("");
+      send(label);
+      listRef.current?.scrollToEnd({ animated: true });
+    },
+    [send],
+  );
 
   // Called by <AuthPrompt /> after a successful sign-in. Reads the
   // pending retry from the store and invokes send() directly — no
@@ -101,7 +112,9 @@ export function ChatScreen() {
         <DataCard displayHint={lastResponse.display_hint} data={lastResponse.data} />
       ) : null}
       <ToolIndicator visible={sending} />
-
+      {activeChoices && activeChoices.length > 0 ? (
+        <ChoiceButtons choices={activeChoices} onChoose={onChoice} />
+      ) : null}
       <View style={styles.inputRow}>
         <TextInput
           ref={inputRef}

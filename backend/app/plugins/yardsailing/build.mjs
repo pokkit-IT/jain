@@ -1,7 +1,7 @@
 import { build } from "esbuild";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname);
@@ -22,11 +22,18 @@ await build({
   external: ["react", "react-native"],
   loader: { ".tsx": "tsx", ".ts": "ts" },
   logLevel: "info",
-  // Override esbuild's __toESM wrapper — it creates a proxy that breaks
-  // React 19's exports when loaded via new Function() + require shim.
-  // Passthrough is safe because the PluginHost shim already returns the
-  // real CJS module objects directly.
-  banner: { js: "var __toESM = (mod) => mod;" },
 });
+
+// Post-build patch: replace esbuild's __toESM wrapper with a passthrough.
+// esbuild's __toESM creates Object.create(getPrototypeOf(mod)) which loses
+// all own-property named exports (useState, etc.) from the require shim's
+// React module. Passthrough is safe because the PluginHost shim already
+// returns the real CJS module objects directly.
+let content = readFileSync(outfile, "utf-8");
+content = content.replace(
+  /var __toESM = \([^)]*\) => \([^;]*\);/,
+  "var __toESM = (mod) => mod;",
+);
+writeFileSync(outfile, content);
 
 console.log(`[yardsailing] built ${outfile}`);

@@ -130,9 +130,10 @@ class ToolExecutor:
         # user identity rather than send a foot-gun empty key. The call falls
         # through to anonymous mode and whatever the plugin does with no auth.
         headers = {"X-Requested-With": "XMLHttpRequest"}
-        if user is not None and settings.JAIN_SERVICE_KEY:
+        plugin_service_key = getattr(plugin, "service_key", None) or settings.JAIN_SERVICE_KEY
+        if user is not None and plugin_service_key:
             from urllib.parse import quote
-            headers["X-Jain-Service-Key"] = settings.JAIN_SERVICE_KEY
+            headers["X-Jain-Service-Key"] = plugin_service_key
             headers["X-Jain-User-Email"] = quote(user.email, safe="@")
             headers["X-Jain-User-Name"] = quote(user.name, safe="")
 

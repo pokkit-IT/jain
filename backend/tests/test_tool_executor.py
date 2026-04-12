@@ -349,6 +349,44 @@ async def test_execute_calls_handler_for_internal_tool():
     assert json.loads(result.content) == {"greeting": "hi"}
 
 
+async def test_executor_uses_per_plugin_service_key(registry, httpx_mock):
+    """When the plugin has a service_key attribute set by the external
+    loader, the executor forwards that instead of settings.JAIN_SERVICE_KEY."""
+    from uuid import uuid4
+    from app.config import settings
+    from app.models.user import User
+
+    plugin = registry.get_plugin("yardsailing")
+    plugin.service_key = "per-plugin-key-xyz"  # type: ignore[attr-defined]
+
+    original_key = settings.JAIN_SERVICE_KEY
+    settings.JAIN_SERVICE_KEY = "global-should-be-ignored"
+
+    try:
+        httpx_mock.add_response(
+            method="GET",
+            url="https://api.yardsailing.sale/api/sales?lat=1.0&lng=2.0&radius_miles=10",
+            json={"sales": []},
+        )
+        executor = ToolExecutor(registry=registry)
+        await executor.execute(
+            ToolCall(
+                id="tc1",
+                name="find_yard_sales",
+                arguments={"lat": 1.0, "lng": 2.0, "radius_miles": 10},
+            ),
+            user=User(
+                id=uuid4(), email="a@b.com", name="A",
+                email_verified=True, google_sub="g",
+            ),
+        )
+        sent = httpx_mock.get_requests()[0]
+        assert sent.headers["x-jain-service-key"] == "per-plugin-key-xyz"
+    finally:
+        settings.JAIN_SERVICE_KEY = original_key
+        plugin.service_key = None  # type: ignore[attr-defined]
+
+
 async def test_handler_receives_db_session_when_provided():
     from pathlib import Path
     from unittest.mock import MagicMock

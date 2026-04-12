@@ -90,9 +90,10 @@ async def call_plugin_api(
     # Build headers the same way the tool executor does (Phase 2B auth
     # pass-through via service key + URL-encoded user identity).
     headers = {"X-Requested-With": "XMLHttpRequest", "Content-Type": "application/json"}
+    plugin_service_key = getattr(plugin, "service_key", None) or settings.JAIN_SERVICE_KEY
     auth_applied = False
-    if user is not None and settings.JAIN_SERVICE_KEY:
-        headers["X-Jain-Service-Key"] = settings.JAIN_SERVICE_KEY
+    if user is not None and plugin_service_key:
+        headers["X-Jain-Service-Key"] = plugin_service_key
         headers["X-Jain-User-Email"] = quote(user.email, safe="@")
         headers["X-Jain-User-Name"] = quote(user.name, safe="")
         auth_applied = True

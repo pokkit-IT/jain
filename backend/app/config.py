@@ -70,12 +70,15 @@ if settings.JWT_SECRET.startswith(_DEV_JWT_SECRET_PREFIX):
     logging.getLogger("jain.config").warning(msg)
     warnings.warn(msg, stacklevel=1)
 
-if not settings.JAIN_SERVICE_KEY:
-    msg = (
-        "JAIN_SERVICE_KEY is empty — authenticated tool calls will be forwarded "
-        "as anonymous (no service-key header). Set JAIN_SERVICE_KEY in .env to "
-        "enable authenticated plugin calls. Generate with: "
-        'python -c "import secrets; print(secrets.token_urlsafe(32))"'
-    )
-    logging.getLogger("jain.config").warning(msg)
-    warnings.warn(msg, stacklevel=1)
+def warn_if_service_key_set(s: Settings) -> None:
+    if s.JAIN_SERVICE_KEY:
+        msg = (
+            "JAIN_SERVICE_KEY env var is deprecated; use per-plugin service "
+            "keys via POST /api/plugins/install. Legacy value will be used "
+            "as a fallback for any external plugin without its own key."
+        )
+        logging.getLogger("jain.config").warning(msg)
+        warnings.warn(msg, DeprecationWarning, stacklevel=1)
+
+
+warn_if_service_key_set(settings)

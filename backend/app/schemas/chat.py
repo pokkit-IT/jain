@@ -20,3 +20,4 @@ class ChatResponse(BaseModel):
     data: Any | None = None
     display_hint: str | None = None
     tool_events: list[dict[str, Any]] = Field(default_factory=list)
+    choices: list[str] | None = None

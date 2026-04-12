@@ -398,3 +398,25 @@ async def test_chat_service_sets_component_hint_for_ui_tool(registry):
         assert reply.text == "Fill it in"
     finally:
         tool.ui_component = None
+
+
+async def test_chat_service_extracts_choices(registry, monkeypatch):
+    from unittest.mock import AsyncMock
+    from app.engine.base import LLMResponse
+    from app.services.chat_service import ChatService
+
+    fake_provider = AsyncMock()
+    fake_provider.complete.return_value = LLMResponse(
+        text="Pick one:\n[CHOICES]Option A|Option B[/CHOICES]",
+        tool_calls=[],
+    )
+
+    service = ChatService(
+        registry=registry,
+        provider=fake_provider,
+        tool_executor=AsyncMock(),
+    )
+
+    reply = await service.send([{"role": "user", "content": "help"}])
+    assert reply.text == "Pick one:"
+    assert reply.choices == ["Option A", "Option B"]

@@ -36,4 +36,5 @@ async def chat(
         data=reply.data,
         display_hint=reply.display_hint,
         tool_events=reply.tool_events,
+        choices=reply.choices,
     )

@@ -10,6 +10,7 @@ from app.plugins.core.registry import PluginRegistry
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+from .choices import extract_choices
 from .context_builder import build_system_prompt
 
 
@@ -19,6 +20,7 @@ class ChatReply:
     data: Any | None = None
     display_hint: str | None = None
     tool_events: list[dict] = field(default_factory=list)
+    choices: list[str] | None = None
 
 
 def _infer_display_hint(plugin_name: str, tool_name: str, data: Any) -> str | None:
@@ -95,11 +97,13 @@ class ChatService:
             )
 
             if not response.tool_calls:
+                clean_text, choices = extract_choices(response.text)
                 return ChatReply(
-                    text=response.text,
+                    text=clean_text,
                     data=last_data,
                     display_hint=last_display_hint,
                     tool_events=tool_events,
+                    choices=choices,
                 )
 
             # Append assistant turn (with tool_use blocks) and execute each tool

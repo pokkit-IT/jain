@@ -113,3 +113,38 @@ class ExternalPluginLoader:
             if existing is not None and existing.manifest.type == "internal":
                 continue
             registry.register(plugin)
+
+    async def load_from_db(self, registry: PluginRegistry, db) -> None:
+        """Phase 3 Stage 4: load external plugins from the installed_plugins table.
+
+        Each row's manifest_json is trusted because it was validated at install
+        time. If a row fails to parse, skip it and log a warning.
+        """
+        from pathlib import Path as _Path
+        from sqlalchemy import select
+
+        from app.models.installed_plugin import InstalledPlugin
+
+        result = await db.execute(select(InstalledPlugin))
+        for row in result.scalars().all():
+            try:
+                manifest = PluginManifest.model_validate_json(row.manifest_json)
+            except Exception as e:
+                _log.warning(
+                    "installed plugin '%s' has invalid manifest_json: %s", row.name, e,
+                )
+                continue
+
+            plugin_dir = (
+                _Path(row.bundle_path).parent
+                if row.bundle_path
+                else _Path(".")
+            )
+            loaded = LoadedPlugin(
+                manifest=manifest,
+                plugin_dir=plugin_dir,
+            )
+            # Stash the service key on the loaded plugin so the tool executor
+            # can look it up per-plugin instead of reading settings.JAIN_SERVICE_KEY.
+            loaded.service_key = row.service_key  # type: ignore[attr-defined]
+            registry.register(loaded)

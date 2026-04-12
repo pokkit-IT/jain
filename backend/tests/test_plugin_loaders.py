@@ -75,3 +75,61 @@ def test_get_registry_runs_both_loaders(monkeypatch, tmp_path):
     assert external_called["v"]
 
     dependencies.reset_registry_for_tests()
+
+
+async def test_external_loader_reads_installed_plugins_table():
+    import json
+    from datetime import datetime
+    from uuid import uuid4
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+    from app.models.base import Base
+    from app.models.installed_plugin import InstalledPlugin
+    from app.models.user import User
+    from app.plugins.core.loaders import ExternalPluginLoader
+    from app.plugins.core.registry import PluginRegistry
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with maker() as s:
+        user = User(
+            id=uuid4(), email="a@b.com", name="A", email_verified=True, google_sub="g",
+        )
+        s.add(user)
+        await s.flush()
+
+        manifest = {
+            "name": "weather",
+            "version": "1.0.0",
+            "type": "external",
+            "description": "Weather lookup",
+            "skills": [],
+            "api": {"base_url": "https://weather.example.com"},
+        }
+        s.add(InstalledPlugin(
+            name="weather",
+            manifest_url="https://weather.example.com/plugin.json",
+            manifest_json=json.dumps(manifest),
+            service_key="sk-1",
+            bundle_path=None,
+            installed_at=datetime.utcnow(),
+            installed_by=user.id,
+        ))
+        await s.commit()
+
+    registry = PluginRegistry(plugins_dir="/tmp/unused")
+    loader = ExternalPluginLoader(plugins_dir="/tmp/unused")
+
+    async with maker() as s:
+        await loader.load_from_db(registry, s)
+
+    plugin = registry.get_plugin("weather")
+    assert plugin is not None
+    assert plugin.manifest.type == "external"
+    assert plugin.manifest.api.base_url == "https://weather.example.com"
+
+    await engine.dispose()

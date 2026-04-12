@@ -50,20 +50,59 @@ export function useGoogleSignIn(): {
 
   const signIn = async (): Promise<string | null> => {
     console.log("[googleAuth] signIn called, request ready:", !!request, "platform:", Platform.OS);
-    console.log("[googleAuth] IOS_CLIENT_ID:", IOS_CLIENT_ID ? IOS_CLIENT_ID.slice(0, 20) + "..." : "EMPTY");
     if (!request) return null;
     const result = await promptAsync();
     console.log("[googleAuth] promptAsync result type:", result?.type);
-    console.log("[googleAuth] result.authentication:", JSON.stringify((result as any).authentication, null, 2)?.slice(0, 200));
-    console.log("[googleAuth] result.params:", JSON.stringify(result?.params, null, 2)?.slice(0, 200));
     if (result?.type !== "success") return null;
-    // Web (implicit flow): id_token is in result.params.id_token
-    // Native (code exchange): id_token is in result.authentication.idToken
-    const idToken =
+
+    // 1. Check if we already have an id_token (web implicit flow)
+    const directIdToken =
       (result as any).authentication?.idToken ??
       (result.params as { id_token?: string }).id_token;
-    console.log("[googleAuth] extracted idToken:", idToken ? idToken.slice(0, 20) + "..." : "NULL");
-    return idToken ?? null;
+    if (directIdToken) {
+      console.log("[googleAuth] got id_token directly");
+      return directIdToken;
+    }
+
+    // 2. Native code flow: exchange the auth code for tokens using PKCE
+    const code = (result.params as { code?: string }).code;
+    if (!code) {
+      console.log("[googleAuth] no id_token and no code — giving up");
+      return null;
+    }
+
+    console.log("[googleAuth] exchanging auth code for tokens via PKCE");
+    const codeVerifier = (request as any).codeVerifier;
+    const redirectUri = (request as any).redirectUri;
+    const clientId = IOS_CLIENT_ID || WEB_CLIENT_ID;
+
+    console.log("[googleAuth] codeVerifier present:", !!codeVerifier);
+    console.log("[googleAuth] redirectUri:", redirectUri);
+
+    try {
+      const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: clientId,
+          code_verifier: codeVerifier ?? "",
+          grant_type: "authorization_code",
+          redirect_uri: redirectUri ?? "",
+        }).toString(),
+      });
+      const tokenData = await tokenResp.json();
+      console.log("[googleAuth] token exchange status:", tokenResp.status);
+      console.log("[googleAuth] token exchange has id_token:", !!tokenData.id_token);
+      if (tokenData.id_token) {
+        return tokenData.id_token;
+      }
+      console.log("[googleAuth] token exchange response:", JSON.stringify(tokenData).slice(0, 300));
+      return null;
+    } catch (e) {
+      console.log("[googleAuth] token exchange failed:", (e as Error).message);
+      return null;
+    }
   };
 
   return { signIn, ready: request !== null };

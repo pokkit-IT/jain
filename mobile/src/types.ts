@@ -13,6 +13,7 @@ export interface ChatResponse {
   data: unknown | null;
   display_hint: string | null;
   tool_events: ToolEvent[];
+  choices: string[] | null;
 }
 
 export interface PluginSummary {

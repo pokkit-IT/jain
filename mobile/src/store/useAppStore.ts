@@ -31,6 +31,11 @@ interface AppState {
   pendingRetry: string | null;
   setPendingRetry: (message: string | null) => void;
   clearPendingRetry: () => void;
+
+  // Quick-reply choice buttons offered by the LLM
+  activeChoices: string[] | null;
+  setActiveChoices: (choices: string[] | null) => void;
+  clearActiveChoices: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -73,4 +78,8 @@ export const useAppStore = create<AppState>((set) => ({
   pendingRetry: null,
   setPendingRetry: (message) => set({ pendingRetry: message }),
   clearPendingRetry: () => set({ pendingRetry: null }),
+
+  activeChoices: null,
+  setActiveChoices: (choices) => set({ activeChoices: choices }),
+  clearActiveChoices: () => set({ activeChoices: null }),
 }));

@@ -21,6 +21,7 @@ import { useChat } from "../hooks/useChat";
 import { useLocation } from "../hooks/useLocation";
 import { PluginHost } from "../plugins/PluginHost";
 import { useAppStore } from "../store/useAppStore";
+import { listPlugins } from "../api/plugins";
 
 export function ChatScreen() {
   useLocation();
@@ -32,6 +33,7 @@ export function ChatScreen() {
 
   const activeComponent = useAppStore((s) => s.activeComponent);
   const hideComponent = useAppStore((s) => s.hideComponent);
+  const setPlugins = useAppStore((s) => s.setPlugins);
 
   // Refocus the TextInput every time the Jain tab gains focus. Bottom-tab
   // navigator keeps screens mounted across tab switches, so `autoFocus`
@@ -43,6 +45,13 @@ export function ChatScreen() {
       }, 50);
       return () => clearTimeout(timer);
     }, []),
+  );
+
+  // Refresh plugin list when the chat tab gains focus
+  useFocusEffect(
+    useCallback(() => {
+      listPlugins().then(setPlugins).catch(() => {});
+    }, [setPlugins]),
   );
 
   const onSend = async () => {

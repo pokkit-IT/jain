@@ -1,9 +1,10 @@
 import "react-native-gesture-handler";
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { AppState, AppStateStatus } from "react-native";
 
 import { fetchCurrentUser } from "./src/api/auth";
 import { listPlugins } from "./src/api/plugins";
@@ -40,17 +41,28 @@ function useHydrateSession() {
 function useHydratePlugins() {
   const setPlugins = useAppStore((s) => s.setPlugins);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const plugins = await listPlugins();
-        setPlugins(plugins);
-        console.log("[App] loaded plugins:", plugins.map((p) => p.name));
-      } catch (e) {
-        console.log("[App] failed to load plugins:", (e as Error).message);
-      }
-    })();
+  const refresh = useCallback(async () => {
+    try {
+      const plugins = await listPlugins();
+      setPlugins(plugins);
+      console.log("[App] loaded plugins:", plugins.map((p) => p.name));
+    } catch (e) {
+      console.log("[App] failed to load plugins:", (e as Error).message);
+    }
   }, [setPlugins]);
+
+  // Initial load on mount
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // Refresh when app returns to foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
+      if (state === "active") refresh();
+    });
+    return () => sub.remove();
+  }, [refresh]);
 }
 
 export default function App() {

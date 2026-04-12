@@ -22,6 +22,11 @@ await build({
   external: ["react", "react-native"],
   loader: { ".tsx": "tsx", ".ts": "ts" },
   logLevel: "info",
+  // Override esbuild's __toESM wrapper — it creates a proxy that breaks
+  // React 19's exports when loaded via new Function() + require shim.
+  // Passthrough is safe because the PluginHost shim already returns the
+  // real CJS module objects directly.
+  banner: { js: "var __toESM = (mod) => mod;" },
 });
 
 console.log(`[yardsailing] built ${outfile}`);

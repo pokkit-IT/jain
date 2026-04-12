@@ -144,7 +144,7 @@ class ExternalPluginLoader:
                 manifest=manifest,
                 plugin_dir=plugin_dir,
             )
-            # Stash the service key on the loaded plugin so the tool executor
-            # can look it up per-plugin instead of reading settings.JAIN_SERVICE_KEY.
+            # Stash the per-plugin service key on the loaded plugin so the
+            # tool executor can forward it in service-to-service calls.
             loaded.service_key = row.service_key  # type: ignore[attr-defined]
             registry.register(loaded)

@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from app.config import settings
 from app.plugins.core.registry import PluginRegistry
 
 from .base import ToolCall, ToolResult
@@ -126,11 +125,11 @@ class ToolExecutor:
         # non-Latin characters from Google OAuth (CJK, accents, emoji).
         # Plugins MUST urllib.parse.unquote() these values on receipt.
         #
-        # If JAIN_SERVICE_KEY is empty (misconfigured), we refuse to forward
-        # user identity rather than send a foot-gun empty key. The call falls
-        # through to anonymous mode and whatever the plugin does with no auth.
+        # If the plugin has no service_key configured, we skip user identity
+        # headers entirely — fail safe rather than send an empty key.
+        # The call falls through to anonymous mode.
         headers = {"X-Requested-With": "XMLHttpRequest"}
-        plugin_service_key = getattr(plugin, "service_key", None) or settings.JAIN_SERVICE_KEY
+        plugin_service_key = getattr(plugin, "service_key", None) or ""
         if user is not None and plugin_service_key:
             from urllib.parse import quote
             headers["X-Jain-Service-Key"] = plugin_service_key

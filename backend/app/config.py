@@ -1,5 +1,4 @@
 import logging
-import warnings
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -33,11 +32,6 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_DAYS: int = 30
 
-    # Phase 2B: shared secret for JAIN ↔ plugin service-to-service calls.
-    # Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
-    # Set in .env; plugins (e.g. yardsailing) must be configured with the same value.
-    JAIN_SERVICE_KEY: str = ""
-
     # Phase 3: comma-separated list of admin emails, for plugin install/uninstall.
     JAIN_ADMIN_EMAILS: str = ""
 
@@ -68,17 +62,3 @@ if settings.JWT_SECRET.startswith(_DEV_JWT_SECRET_PREFIX):
         "python -c \"import secrets; print(secrets.token_urlsafe(32))\""
     )
     logging.getLogger("jain.config").warning(msg)
-    warnings.warn(msg, stacklevel=1)
-
-def warn_if_service_key_set(s: Settings) -> None:
-    if s.JAIN_SERVICE_KEY:
-        msg = (
-            "JAIN_SERVICE_KEY env var is deprecated; use per-plugin service "
-            "keys via POST /api/plugins/install. Legacy value will be used "
-            "as a fallback for any external plugin without its own key."
-        )
-        logging.getLogger("jain.config").warning(msg)
-        warnings.warn(msg, DeprecationWarning, stacklevel=1)
-
-
-warn_if_service_key_set(settings)

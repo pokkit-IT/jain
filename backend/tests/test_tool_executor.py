@@ -104,11 +104,10 @@ async def test_execute_forwards_service_key_headers_when_user_present(registry, 
     X-Jain-User-Email + X-Jain-User-Name headers to the plugin."""
     from uuid import uuid4
 
-    from app.config import settings
     from app.models.user import User
 
-    original_key = settings.JAIN_SERVICE_KEY
-    settings.JAIN_SERVICE_KEY = "test-service-key-1234"
+    plugin = registry.get_plugin("yardsailing")
+    plugin.service_key = "test-service-key-1234"  # type: ignore[attr-defined]
 
     try:
         httpx_mock.add_response(
@@ -141,7 +140,7 @@ async def test_execute_forwards_service_key_headers_when_user_present(registry, 
         # Name is URL-encoded; spaces become %20
         assert sent_request.headers["x-jain-user-name"] == "Jim%20Shelly"
     finally:
-        settings.JAIN_SERVICE_KEY = original_key
+        plugin.service_key = None  # type: ignore[attr-defined]
 
 
 async def test_execute_no_service_key_headers_when_user_absent(registry, httpx_mock):
@@ -174,11 +173,10 @@ async def test_execute_handles_unicode_user_name(registry, httpx_mock):
     from urllib.parse import unquote
     from uuid import uuid4
 
-    from app.config import settings
     from app.models.user import User
 
-    original_key = settings.JAIN_SERVICE_KEY
-    settings.JAIN_SERVICE_KEY = "test-service-key-unicode"
+    plugin = registry.get_plugin("yardsailing")
+    plugin.service_key = "test-service-key-unicode"  # type: ignore[attr-defined]
 
     try:
         httpx_mock.add_response(
@@ -213,52 +211,49 @@ async def test_execute_handles_unicode_user_name(registry, httpx_mock):
         assert unquote(sent.headers["x-jain-user-email"]) == "jīm@example.com"
         assert unquote(sent.headers["x-jain-user-name"]) == "Jīm Shëlly 山田"
     finally:
-        settings.JAIN_SERVICE_KEY = original_key
+        plugin.service_key = None  # type: ignore[attr-defined]
 
 
 async def test_execute_skips_user_headers_when_service_key_empty(registry, httpx_mock):
-    """When JAIN_SERVICE_KEY is empty, the executor does NOT forward user
+    """When the plugin has no service_key, the executor does NOT forward user
     identity headers even for authenticated users — fail safe rather than
     send an empty key header."""
     from uuid import uuid4
 
-    from app.config import settings
     from app.models.user import User
 
-    original_key = settings.JAIN_SERVICE_KEY
-    settings.JAIN_SERVICE_KEY = ""
+    plugin = registry.get_plugin("yardsailing")
+    # Ensure service_key is absent/None
+    plugin.service_key = None  # type: ignore[attr-defined]
 
-    try:
-        httpx_mock.add_response(
-            method="GET",
-            url="https://api.yardsailing.sale/api/sales?lat=1.0&lng=2.0&radius_miles=10",
-            json={"sales": []},
-        )
+    httpx_mock.add_response(
+        method="GET",
+        url="https://api.yardsailing.sale/api/sales?lat=1.0&lng=2.0&radius_miles=10",
+        json={"sales": []},
+    )
 
-        user = User(
-            id=uuid4(),
-            email="jim@example.com",
-            name="Jim",
-            email_verified=True,
-            google_sub="g-empty-key",
-        )
+    user = User(
+        id=uuid4(),
+        email="jim@example.com",
+        name="Jim",
+        email_verified=True,
+        google_sub="g-empty-key",
+    )
 
-        executor = ToolExecutor(registry=registry)
-        await executor.execute(
-            ToolCall(
-                id="tc1",
-                name="find_yard_sales",
-                arguments={"lat": 1.0, "lng": 2.0, "radius_miles": 10},
-            ),
-            user=user,
-        )
+    executor = ToolExecutor(registry=registry)
+    await executor.execute(
+        ToolCall(
+            id="tc1",
+            name="find_yard_sales",
+            arguments={"lat": 1.0, "lng": 2.0, "radius_miles": 10},
+        ),
+        user=user,
+    )
 
-        sent = httpx_mock.get_requests()[0]
-        assert "x-jain-service-key" not in sent.headers
-        assert "x-jain-user-email" not in sent.headers
-        assert "x-jain-user-name" not in sent.headers
-    finally:
-        settings.JAIN_SERVICE_KEY = original_key
+    sent = httpx_mock.get_requests()[0]
+    assert "x-jain-service-key" not in sent.headers
+    assert "x-jain-user-email" not in sent.headers
+    assert "x-jain-user-name" not in sent.headers
 
 
 async def test_execute_ui_component_tool_returns_synthetic_result(registry):
@@ -351,16 +346,12 @@ async def test_execute_calls_handler_for_internal_tool():
 
 async def test_executor_uses_per_plugin_service_key(registry, httpx_mock):
     """When the plugin has a service_key attribute set by the external
-    loader, the executor forwards that instead of settings.JAIN_SERVICE_KEY."""
+    loader, the executor forwards that key in the service-key header."""
     from uuid import uuid4
-    from app.config import settings
     from app.models.user import User
 
     plugin = registry.get_plugin("yardsailing")
     plugin.service_key = "per-plugin-key-xyz"  # type: ignore[attr-defined]
-
-    original_key = settings.JAIN_SERVICE_KEY
-    settings.JAIN_SERVICE_KEY = "global-should-be-ignored"
 
     try:
         httpx_mock.add_response(
@@ -383,7 +374,6 @@ async def test_executor_uses_per_plugin_service_key(registry, httpx_mock):
         sent = httpx_mock.get_requests()[0]
         assert sent.headers["x-jain-service-key"] == "per-plugin-key-xyz"
     finally:
-        settings.JAIN_SERVICE_KEY = original_key
         plugin.service_key = None  # type: ignore[attr-defined]
 
 

@@ -158,11 +158,10 @@ async def test_chat_service_passes_user_to_tool_executor(registry, httpx_mock):
     """When a User is passed to send(), the tool executor receives it."""
     from uuid import uuid4
 
-    from app.config import settings
     from app.models.user import User
 
-    original_key = settings.JAIN_SERVICE_KEY
-    settings.JAIN_SERVICE_KEY = "test-key-for-chat-service"
+    plugin = registry.get_plugin("yardsailing")
+    plugin.service_key = "test-key-for-chat-service"  # type: ignore[attr-defined]
 
     try:
         httpx_mock.add_response(
@@ -207,7 +206,7 @@ async def test_chat_service_passes_user_to_tool_executor(registry, httpx_mock):
         sent = httpx_mock.get_requests()[0]
         assert sent.headers["x-jain-user-email"] == "jim@example.com"
     finally:
-        settings.JAIN_SERVICE_KEY = original_key
+        plugin.service_key = None  # type: ignore[attr-defined]
 
 
 async def test_chat_service_short_circuits_on_auth_required(registry):
@@ -304,11 +303,10 @@ async def test_chat_service_does_not_short_circuit_on_plugin_returned_auth_requi
     prompt — it's a plugin-level error, not an executor gate refusal."""
     from uuid import uuid4
 
-    from app.config import settings
     from app.models.user import User
 
-    original_key = settings.JAIN_SERVICE_KEY
-    settings.JAIN_SERVICE_KEY = "test-key-short-circuit-negative"
+    plugin = registry.get_plugin("yardsailing")
+    plugin.service_key = "test-key-short-circuit-negative"  # type: ignore[attr-defined]
 
     try:
         # Plugin returns an auth_required-shaped body but WITHOUT __source
@@ -358,7 +356,7 @@ async def test_chat_service_does_not_short_circuit_on_plugin_returned_auth_requi
         # Both LLM calls happened
         assert len(provider.calls) == 2
     finally:
-        settings.JAIN_SERVICE_KEY = original_key
+        plugin.service_key = None  # type: ignore[attr-defined]
 
 
 async def test_chat_service_sets_component_hint_for_ui_tool(registry):

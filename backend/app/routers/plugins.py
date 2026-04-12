@@ -10,7 +10,6 @@ from pydantic import BaseModel
 from starlette.routing import Match
 
 from app.auth.optional_user import get_current_user_optional
-from app.config import settings
 from app.dependencies import get_registry
 from app.models.user import User
 from app.plugins.core.registry import PluginRegistry
@@ -90,7 +89,7 @@ async def call_plugin_api(
     # Build headers the same way the tool executor does (Phase 2B auth
     # pass-through via service key + URL-encoded user identity).
     headers = {"X-Requested-With": "XMLHttpRequest", "Content-Type": "application/json"}
-    plugin_service_key = getattr(plugin, "service_key", None) or settings.JAIN_SERVICE_KEY
+    plugin_service_key = getattr(plugin, "service_key", None) or ""
     auth_applied = False
     if user is not None and plugin_service_key:
         headers["X-Jain-Service-Key"] = plugin_service_key
@@ -104,7 +103,7 @@ async def call_plugin_api(
         url,
         user.email if user else "<anonymous>",
         auth_applied,
-        bool(settings.JAIN_SERVICE_KEY),
+        bool(plugin_service_key),
     )
 
     async with httpx.AsyncClient(timeout=30.0) as client:

@@ -203,3 +203,107 @@ async def test_delete_unknown_plugin_returns_404(admin_client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Task 35: Install validation failure cases
+# ---------------------------------------------------------------------------
+
+_MANIFEST_WITH_BUNDLE = {
+    "name": "widget",
+    "version": "1.0.0",
+    "type": "external",
+    "description": "Widget plugin",
+    "skills": [],
+    "api": {"base_url": "https://widget.example.com"},
+    "components": {
+        "bundle": "bundle/widget.js",
+        "exports": ["Widget"],
+    },
+}
+
+
+class _FakeBundleResponse:
+    """Like _FakeResponse but with configurable content-type and raw content."""
+
+    def __init__(self, status_code: int, content: bytes, content_type: str = "application/javascript"):
+        self.status_code = status_code
+        self.content = content
+        self.text = content.decode("utf-8", errors="replace")
+        self.headers = {"content-type": content_type}
+
+    def json(self):
+        return {}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            import httpx
+            raise httpx.HTTPStatusError(
+                "err", request=httpx.Request("GET", "http://x"), response=self,
+            )
+
+
+async def test_install_rejects_non_js_bundle_content_type(admin_client):
+    """Bundle fetch returns text/html → 400."""
+    client, token = admin_client
+    manifest_resp = _FakeResponse(200, _MANIFEST_WITH_BUNDLE)
+    bundle_resp = _FakeBundleResponse(200, b"<html>not js</html>", content_type="text/html")
+
+    with patch("app.routers.plugins_admin.httpx.AsyncClient") as Mock:
+        instance = Mock.return_value.__aenter__.return_value
+        instance.get = AsyncMock(side_effect=[manifest_resp, bundle_resp])
+        resp = await client.post(
+            "/api/plugins/install",
+            json={"manifest_url": "https://widget.example.com/plugin.json", "service_key": "sk"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert resp.status_code == 400
+    assert "content-type" in resp.json()["detail"].lower()
+
+
+async def test_install_rejects_oversized_bundle(admin_client):
+    """Bundle fetch returns >2 MiB body → 400."""
+    client, token = admin_client
+    oversized = b"x" * (3 * 1024 * 1024)  # 3 MiB
+    manifest_resp = _FakeResponse(200, _MANIFEST_WITH_BUNDLE)
+    bundle_resp = _FakeBundleResponse(200, oversized, content_type="application/javascript")
+
+    with patch("app.routers.plugins_admin.httpx.AsyncClient") as Mock:
+        instance = Mock.return_value.__aenter__.return_value
+        instance.get = AsyncMock(side_effect=[manifest_resp, bundle_resp])
+        resp = await client.post(
+            "/api/plugins/install",
+            json={"manifest_url": "https://widget.example.com/plugin.json", "service_key": "sk"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert resp.status_code == 400
+    assert "size" in resp.json()["detail"].lower() or "bytes" in resp.json()["detail"].lower()
+
+
+async def test_install_rejects_tool_name_collision(admin_client):
+    """Manifest declares create_yard_sale (already registered by yardsailing) → 409."""
+    client, token = admin_client
+    manifest = {
+        "name": "collider",
+        "version": "1.0.0",
+        "type": "external",
+        "description": "Collides with yardsailing tools",
+        "skills": [
+            {
+                "name": "collision-skill",
+                "description": "Clashes.",
+                "tools": ["create_yard_sale"],
+            }
+        ],
+        "api": {"base_url": "https://collider.example.com"},
+    }
+    with patch("app.routers.plugins_admin.httpx.AsyncClient") as Mock:
+        instance = Mock.return_value.__aenter__.return_value
+        instance.get = AsyncMock(return_value=_FakeResponse(200, manifest))
+        resp = await client.post(
+            "/api/plugins/install",
+            json={"manifest_url": "https://collider.example.com/plugin.json", "service_key": "sk"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert resp.status_code == 409
+    assert "create_yard_sale" in resp.json()["detail"]

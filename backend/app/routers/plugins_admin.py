@@ -1,10 +1,12 @@
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.admin import get_current_admin_user
@@ -106,3 +108,53 @@ async def install_plugin(
         version=manifest.version,
         tools=incoming_tool_names,
     )
+
+
+class InstalledPluginResponse(BaseModel):
+    name: str
+    version: str
+    manifest_url: str
+    installed_at: datetime
+
+
+@router.get("/installed", response_model=list[InstalledPluginResponse])
+async def list_installed_plugins(
+    admin: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[InstalledPluginResponse]:
+    result = await db.execute(select(InstalledPlugin))
+    out: list[InstalledPluginResponse] = []
+    for row in result.scalars().all():
+        try:
+            manifest = PluginManifest.model_validate_json(row.manifest_json)
+        except Exception:
+            continue
+        out.append(InstalledPluginResponse(
+            name=row.name,
+            version=manifest.version,
+            manifest_url=row.manifest_url,
+            installed_at=row.installed_at,
+        ))
+    return out
+
+
+@router.delete("/{plugin_name}", status_code=status.HTTP_204_NO_CONTENT)
+async def uninstall_plugin(
+    plugin_name: str,
+    admin: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db),
+    registry: PluginRegistry = Depends(get_registry),
+) -> None:
+    row = await db.get(InstalledPlugin, plugin_name)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"plugin '{plugin_name}' not installed")
+
+    if row.bundle_path:
+        try:
+            Path(row.bundle_path).unlink(missing_ok=True)
+        except Exception as e:
+            _log.warning("failed to delete bundle %s: %s", row.bundle_path, e)
+
+    await db.delete(row)
+    await db.commit()
+    registry.unregister(plugin_name)

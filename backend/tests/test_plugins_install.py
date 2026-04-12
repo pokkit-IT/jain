@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from app.auth.jwt import sign_access_token
 from app.config import settings
 from app.database import async_session, engine
+from app.dependencies import reset_registry_for_tests
 from app.main import create_app
 from app.models.base import Base
 from app.models.installed_plugin import InstalledPlugin
@@ -16,6 +17,8 @@ from app.models.user import User
 
 @pytest.fixture
 async def admin_client():
+    # Reset cached registry so each test starts with a clean in-memory state.
+    reset_registry_for_tests()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
@@ -36,6 +39,7 @@ async def admin_client():
             yield c, token
     finally:
         settings.JAIN_ADMIN_EMAILS = orig
+        reset_registry_for_tests()
 
 
 _VALID_MANIFEST = {
@@ -145,3 +149,57 @@ async def test_install_handles_manifest_fetch_failure(admin_client):
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 400
+
+
+async def test_list_installed_returns_empty_initially(admin_client):
+    client, token = admin_client
+    resp = await client.get(
+        "/api/plugins/installed",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+async def test_list_installed_then_delete(admin_client):
+    client, token = admin_client
+    with patch("app.routers.plugins_admin.httpx.AsyncClient") as Mock:
+        Mock.return_value.__aenter__.return_value.get = AsyncMock(
+            return_value=_FakeResponse(200, _VALID_MANIFEST),
+        )
+        await client.post(
+            "/api/plugins/install",
+            json={"manifest_url": "x", "service_key": "sk"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    resp = await client.get(
+        "/api/plugins/installed",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert [p["name"] for p in resp.json()] == ["weather"]
+
+    resp = await client.delete(
+        "/api/plugins/weather",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 204
+
+    async with async_session() as s:
+        assert await s.get(InstalledPlugin, "weather") is None
+
+    resp = await client.get(
+        "/api/plugins/installed",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.json() == []
+
+
+async def test_delete_unknown_plugin_returns_404(admin_client):
+    client, token = admin_client
+    resp = await client.delete(
+        "/api/plugins/nonexistent",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 404

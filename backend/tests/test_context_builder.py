@@ -50,3 +50,12 @@ def test_system_prompt_authenticated_user_shows_email_and_name():
     assert "jim@example.com" in prompt
     assert "Jim Shelly" in prompt
     assert "not authenticated" not in prompt.lower()
+
+
+def test_system_prompt_contains_choices_instruction():
+    reg = PluginRegistry(plugins_dir=FIXTURES)
+    reg.load_all()
+
+    prompt = build_system_prompt(reg)
+    assert "[CHOICES]" in prompt
+    assert "|" in prompt

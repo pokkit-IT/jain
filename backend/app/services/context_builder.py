@@ -12,6 +12,16 @@ When helping a user create or configure something, you can either:
 2. Present a form if the plugin provides one and the user prefers that.
 
 Ask the user which they prefer if it's not obvious from context.
+
+When you want to offer the user a choice between 2-4 options, include a choices block at the END of your reply in exactly this format:
+[CHOICES]Option one|Option two|Option three[/CHOICES]
+
+Rules for choices:
+- Each option should be a short phrase (under 40 characters) the user would naturally type.
+- Separate options with | (pipe).
+- Place the [CHOICES] block AFTER your conversational text.
+- Only include choices at genuine decision points — not for yes/no or when there is only one path.
+- Do NOT include choices if the user already told you what they want.
 """
 
 

@@ -40,6 +40,7 @@ export function useChat() {
 
     // Manual send always clears any stale pending retry
     store.clearPendingRetry();
+    store.clearActiveChoices();
 
     const userTurn = { role: "user" as const, content: text };
     store.appendMessage(userTurn);
@@ -88,6 +89,11 @@ export function useChat() {
           currentPlugins.map((p) => p.name),
         );
         if (owner) showComponent(owner.name, name, res.data ?? undefined);
+      }
+
+      // Quick-reply choices
+      if (res.choices && res.choices.length > 0) {
+        store.setActiveChoices(res.choices);
       }
     } catch (e) {
       appendMessage({

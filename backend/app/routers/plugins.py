@@ -3,7 +3,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import PlainTextResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel
@@ -52,6 +52,7 @@ _log = logging.getLogger("jain.plugins.proxy")
 async def call_plugin_api(
     plugin_name: str,
     req: PluginCallRequest,
+    request: Request,
     registry: PluginRegistry = Depends(get_registry),
     user: User | None = Depends(get_current_user_optional),
 ) -> Response:
@@ -75,7 +76,7 @@ async def call_plugin_api(
     # rather than httpx. Look up the route on the plugin's registration
     # that matches (method, path) and invoke it directly.
     if plugin.manifest.type == "internal":
-        return await _dispatch_internal(plugin, req, user)
+        return await _dispatch_internal(plugin, req, request)
 
     if plugin.manifest.api is None:
         raise HTTPException(
@@ -146,59 +147,71 @@ async def call_plugin_api(
 
 
 async def _dispatch_internal(
-    plugin, req: PluginCallRequest, user: "User | None"
+    plugin, req: "PluginCallRequest", request: Request,
 ) -> Response:
-    """Dispatch a proxy call to an internal plugin by invoking the
-    matching APIRoute on its registration.router directly.
+    """Forward the proxy call to the plugin's own router via the same
+    FastAPI app instance. We construct an ASGI sub-request that targets
+    the plugin's path, reusing the original Authorization header so
+    get_current_user resolves the same user.
 
-    This preserves the mobile PluginBridge interface (POST to
-    /api/plugins/{name}/call with method/path/body) while avoiding a
-    real HTTP round-trip. NOTE: this is a naive dispatcher that only
-    handles single-body-arg routes. Stage 3 Task 24 upgrades it to an
-    ASGI sub-request for routes that use FastAPI dependencies.
+    This sidesteps re-implementing FastAPI's dependency injection machinery
+    — the sub-request goes through the real router, hits the real
+    Depends(get_current_user) and Depends(get_db), and comes back with
+    whatever the inner route produced.
     """
     import json as _json
 
-    registration = getattr(plugin, "registration", None)
-    if registration is None or registration.router is None:
-        raise HTTPException(
-            status_code=500,
-            detail=f"internal plugin '{plugin.manifest.name}' has no router",
-        )
-
     method = req.method.upper()
     path = req.path
+    body_bytes = _json.dumps(req.body or {}).encode("utf-8")
+    auth_header = request.headers.get("authorization", "")
 
-    for route in registration.router.routes:
-        if not isinstance(route, APIRoute):
-            continue
-        if method not in route.methods:
-            continue
-        scope = {"type": "http", "method": method, "path": path, "headers": []}
-        match, _child_scope = route.matches(scope)
-        if match == Match.FULL:
-            try:
-                if method == "GET":
-                    result = await route.endpoint()
-                else:
-                    result = await route.endpoint(req.body or {})
-            except HTTPException as e:
-                return Response(
-                    content=_json.dumps({"detail": e.detail}),
-                    status_code=e.status_code,
-                    media_type="application/json",
-                )
-            return Response(
-                content=(
-                    _json.dumps(result)
-                    if not isinstance(result, (bytes, str))
-                    else result
-                ),
-                status_code=200,
-                media_type="application/json",
-            )
+    # Build a minimal ASGI scope for the sub-request.
+    headers_list: list[tuple[bytes, bytes]] = [
+        (b"content-type", b"application/json"),
+    ]
+    if auth_header:
+        headers_list.append((b"authorization", auth_header.encode("utf-8")))
 
-    raise HTTPException(
-        status_code=404,
-        detail=f"no route for {method} {path} on plugin '{plugin.manifest.name}'",
+    scope = {
+        "type": "http",
+        "http_version": "1.1",
+        "method": method,
+        "path": path,
+        "raw_path": path.encode("utf-8"),
+        "query_string": b"",
+        "headers": headers_list,
+        "app": request.app,
+        "scheme": "http",
+        "server": ("testserver", 80),
+        "client": ("testclient", 50000),
+    }
+
+    sent_body_chunks: list[bytes] = []
+    response_start: dict = {}
+
+    async def receive():
+        return {"type": "http.request", "body": body_bytes, "more_body": False}
+
+    async def send(message):
+        if message["type"] == "http.response.start":
+            response_start.update(message)
+        elif message["type"] == "http.response.body":
+            sent_body_chunks.append(message.get("body", b""))
+
+    await request.app(scope, receive, send)
+
+    status_code = response_start.get("status", 500)
+    body = b"".join(sent_body_chunks)
+    # Extract content-type from response headers if available
+    content_type = "application/json"
+    for k, v in response_start.get("headers", []):
+        if k.lower() == b"content-type":
+            content_type = v.decode("utf-8")
+            break
+
+    return Response(
+        content=body,
+        status_code=status_code,
+        media_type=content_type,
     )

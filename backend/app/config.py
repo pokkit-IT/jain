@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     # Google OAuth (sub-project A)
     GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_IOS_CLIENT_ID: str = ""
 
     # JAIN JWT signing (sub-project A)
     # Dev default is ≥32 bytes to satisfy pyjwt's HS256 key-length check.

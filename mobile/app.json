@@ -14,7 +14,14 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pokkitit.jain",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleURLSchemes": [
+          "com.googleusercontent.apps.833229722097-4sg8lvo085fafi20mab5ggfa84gkcqrr"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {

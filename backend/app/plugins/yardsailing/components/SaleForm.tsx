@@ -134,29 +134,40 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
   const multiDay = rangeDates.length > 1;
   const [picker, setPicker] = useState<PickerTarget | null>(null);
 
-  const onPickerChange = (event: any, selected?: Date) => {
-    // Android fires with event.type="dismissed" on cancel. iOS fires
-    // on every spin but the modal closes via a "done" button; we close
-    // ourselves to keep the UX consistent across platforms.
-    const dismissed = event?.type === "dismissed";
-    const target = picker;
-    setPicker(null);
-    if (!selected || !target || dismissed) return;
-
+  const applyPick = (target: PickerTarget, selected: Date) => {
     if (target.kind === "date") {
-      set(target.field, dateToIso(selected));
-      // If they pushed end_date below start_date, auto-fix end_date.
-      if (target.field === "start_date" && data.end_date && data.end_date < dateToIso(selected)) {
-        set("end_date", dateToIso(selected));
+      const iso = dateToIso(selected);
+      set(target.field, iso);
+      if (target.field === "start_date" && data.end_date && data.end_date < iso) {
+        set("end_date", iso);
       }
     } else if ("dayDate" in target) {
       const existing = data.days.find((x) => x.day_date === target.dayDate);
-      const st = target.which === "start" ? timeToHHMM(selected) : (existing?.start_time ?? data.start_time);
-      const et = target.which === "end" ? timeToHHMM(selected) : (existing?.end_time ?? data.end_time);
+      const st = target.which === "start"
+        ? timeToHHMM(selected)
+        : (existing?.start_time ?? data.start_time);
+      const et = target.which === "end"
+        ? timeToHHMM(selected)
+        : (existing?.end_time ?? data.end_time);
       setDayHours(target.dayDate, st, et);
     } else {
       set(target.field, timeToHHMM(selected));
     }
+  };
+
+  const onPickerChange = (event: any, selected?: Date) => {
+    const target = picker;
+    if (!target) return;
+    // Android: single confirm/dismiss event, close the picker after.
+    if (Platform.OS === "android") {
+      setPicker(null);
+      if (event?.type === "dismissed" || !selected) return;
+      applyPick(target, selected);
+      return;
+    }
+    // iOS (spinner/inline): continuous onChange while the user spins.
+    // Keep the picker rendered; apply value live. Dismiss via Done button.
+    if (selected) applyPick(target, selected);
   };
 
   const setDayHours = (day: string, startT: string, endT: string) => {
@@ -368,26 +379,35 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
       </View>
 
       {picker ? (
-        <DateTimePicker
-          mode={picker.kind}
-          value={(() => {
-            if (picker.kind === "date") {
-              const iso = data[picker.field] || data.start_date;
-              return parseIsoDate(iso);
-            }
-            if ("dayDate" in picker) {
-              const row = data.days.find((x) => x.day_date === picker.dayDate);
-              const hhmm = (picker.which === "start"
-                ? (row?.start_time ?? data.start_time)
-                : (row?.end_time ?? data.end_time)) || "09:00";
-              return parseHHMM(hhmm);
-            }
-            return parseHHMM(data[picker.field] || "09:00");
-          })()}
-          onChange={onPickerChange}
-          is24Hour={false}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-        />
+        <View style={Platform.OS === "ios" ? styles.iosPickerBox : undefined}>
+          {Platform.OS === "ios" ? (
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setPicker(null)}>
+                <Text style={styles.iosPickerDone}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+          <DateTimePicker
+            mode={picker.kind}
+            value={(() => {
+              if (picker.kind === "date") {
+                const iso = data[picker.field] || data.start_date;
+                return parseIsoDate(iso);
+              }
+              if ("dayDate" in picker) {
+                const row = data.days.find((x) => x.day_date === picker.dayDate);
+                const hhmm = (picker.which === "start"
+                  ? (row?.start_time ?? data.start_time)
+                  : (row?.end_time ?? data.end_time)) || "09:00";
+                return parseHHMM(hhmm);
+              }
+              return parseHHMM(data[picker.field] || "09:00");
+            })()}
+            onChange={onPickerChange}
+            is24Hour={false}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+          />
+        </View>
       ) : null}
 
       <TouchableOpacity
@@ -471,6 +491,23 @@ const styles = StyleSheet.create({
   },
   pickerText: { fontSize: 16, color: "#0f172a" },
   pickerPlaceholder: { fontSize: 16, color: "#94a3b8" },
+  iosPickerBox: {
+    backgroundColor: "#f1f5f9",
+    borderRadius: 10,
+    marginTop: 8,
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  iosPickerHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    backgroundColor: "#fff",
+  },
+  iosPickerDone: { color: "#2563eb", fontWeight: "700", fontSize: 15 },
   dayRow: {
     flexDirection: "row",
     alignItems: "center",

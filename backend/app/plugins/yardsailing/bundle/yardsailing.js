@@ -146,16 +146,13 @@
     const rangeDates = datesInRange(data.start_date, data.end_date);
     const multiDay = rangeDates.length > 1;
     const [picker, setPicker] = (0, import_react.useState)(null);
-    const onPickerChange = (event, selected) => {
+    const applyPick = (target, selected) => {
       var _a, _b;
-      const dismissed = (event == null ? void 0 : event.type) === "dismissed";
-      const target = picker;
-      setPicker(null);
-      if (!selected || !target || dismissed) return;
       if (target.kind === "date") {
-        set(target.field, dateToIso(selected));
-        if (target.field === "start_date" && data.end_date && data.end_date < dateToIso(selected)) {
-          set("end_date", dateToIso(selected));
+        const iso = dateToIso(selected);
+        set(target.field, iso);
+        if (target.field === "start_date" && data.end_date && data.end_date < iso) {
+          set("end_date", iso);
         }
       } else if ("dayDate" in target) {
         const existing = data.days.find((x) => x.day_date === target.dayDate);
@@ -165,6 +162,17 @@
       } else {
         set(target.field, timeToHHMM(selected));
       }
+    };
+    const onPickerChange = (event, selected) => {
+      const target = picker;
+      if (!target) return;
+      if (import_react_native.Platform.OS === "android") {
+        setPicker(null);
+        if ((event == null ? void 0 : event.type) === "dismissed" || !selected) return;
+        applyPick(target, selected);
+        return;
+      }
+      if (selected) applyPick(target, selected);
     };
     const setDayHours = (day, startT, endT) => {
       setData((d) => {
@@ -295,7 +303,7 @@
         },
         /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: [styles.tagText, active && styles.tagTextActive] }, tag)
       );
-    })), picker ? /* @__PURE__ */ import_react.default.createElement(
+    })), picker ? /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: import_react_native.Platform.OS === "ios" ? styles.iosPickerBox : void 0 }, import_react_native.Platform.OS === "ios" ? /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.iosPickerHeader }, /* @__PURE__ */ import_react.default.createElement(import_react_native.TouchableOpacity, { onPress: () => setPicker(null) }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.iosPickerDone }, "Done"))) : null, /* @__PURE__ */ import_react.default.createElement(
       import_datetimepicker.default,
       {
         mode: picker.kind,
@@ -316,7 +324,7 @@
         is24Hour: false,
         display: import_react_native.Platform.OS === "ios" ? "spinner" : "default"
       }
-    ) : null, /* @__PURE__ */ import_react.default.createElement(
+    )) : null, /* @__PURE__ */ import_react.default.createElement(
       import_react_native.TouchableOpacity,
       {
         style: [styles.button, submitting && styles.buttonDisabled],
@@ -394,6 +402,23 @@
     },
     pickerText: { fontSize: 16, color: "#0f172a" },
     pickerPlaceholder: { fontSize: 16, color: "#94a3b8" },
+    iosPickerBox: {
+      backgroundColor: "#f1f5f9",
+      borderRadius: 10,
+      marginTop: 8,
+      marginBottom: 8,
+      overflow: "hidden"
+    },
+    iosPickerHeader: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: "#e2e8f0",
+      backgroundColor: "#fff"
+    },
+    iosPickerDone: { color: "#2563eb", fontWeight: "700", fontSize: 15 },
     dayRow: {
       flexDirection: "row",
       alignItems: "center",

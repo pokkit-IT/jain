@@ -31,11 +31,18 @@ async function loadBundle(pluginName: string, bundlePath: string): Promise<void>
   // "react/jsx-runtime" — shimmed here too for safety.
   const reactModule = require("react");
   const rnModule = require("react-native");
+  const dateTimePickerModule = require("@react-native-community/datetimepicker");
   // esbuild's ESM interop generates `import_react.default.createElement()`
   // for JSX, but CJS modules have no `.default`. Add a self-reference so
   // both `mod.useState` (named) and `mod.default.createElement` (default) work.
   if (!reactModule.default) reactModule.default = reactModule;
   if (!rnModule.default) rnModule.default = rnModule;
+  // datetimepicker ships as ESM so its default export is the component.
+  // Make the CJS-style `.default` reference resolve to itself for the
+  // plugin bundle's import_default.default access pattern.
+  if (!dateTimePickerModule.default) {
+    dateTimePickerModule.default = dateTimePickerModule;
+  }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   let jsxRuntimeModule: unknown;
   try {
@@ -48,6 +55,7 @@ async function loadBundle(pluginName: string, bundlePath: string): Promise<void>
   const shim = (mod: string) => {
     if (mod === "react") return reactModule;
     if (mod === "react-native") return rnModule;
+    if (mod === "@react-native-community/datetimepicker") return dateTimePickerModule;
     if (mod === "react/jsx-runtime" || mod === "react/jsx-dev-runtime") {
       if (jsxRuntimeModule) return jsxRuntimeModule;
       throw new Error(

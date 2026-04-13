@@ -61,6 +61,34 @@
   // components/SaleForm.tsx
   var import_react = __toESM(__require("react"), 1);
   var import_react_native = __require("react-native");
+  var import_datetimepicker = __toESM(__require("@react-native-community/datetimepicker"), 1);
+  function pad2(n) {
+    return n < 10 ? `0${n}` : String(n);
+  }
+  function dateToIso(d) {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+  function timeToHHMM(d) {
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  }
+  function parseIsoDate(iso) {
+    if (iso) {
+      const d = /* @__PURE__ */ new Date(iso + "T00:00:00");
+      if (!isNaN(d.getTime())) return d;
+    }
+    return /* @__PURE__ */ new Date();
+  }
+  function parseHHMM(s) {
+    const d = /* @__PURE__ */ new Date();
+    d.setSeconds(0, 0);
+    if (s && /^\d{1,2}:\d{2}$/.test(s)) {
+      const [h, m] = s.split(":").map(Number);
+      d.setHours(h, m);
+    } else {
+      d.setHours(9, 0);
+    }
+    return d;
+  }
   var FALLBACK_TAGS = [
     "Furniture",
     "Toys",
@@ -117,6 +145,27 @@
     const set = (key, value) => setData((d) => __spreadProps(__spreadValues({}, d), { [key]: value }));
     const rangeDates = datesInRange(data.start_date, data.end_date);
     const multiDay = rangeDates.length > 1;
+    const [picker, setPicker] = (0, import_react.useState)(null);
+    const onPickerChange = (event, selected) => {
+      var _a, _b;
+      const dismissed = (event == null ? void 0 : event.type) === "dismissed";
+      const target = picker;
+      setPicker(null);
+      if (!selected || !target || dismissed) return;
+      if (target.kind === "date") {
+        set(target.field, dateToIso(selected));
+        if (target.field === "start_date" && data.end_date && data.end_date < dateToIso(selected)) {
+          set("end_date", dateToIso(selected));
+        }
+      } else if ("dayDate" in target) {
+        const existing = data.days.find((x) => x.day_date === target.dayDate);
+        const st = target.which === "start" ? timeToHHMM(selected) : (_a = existing == null ? void 0 : existing.start_time) != null ? _a : data.start_time;
+        const et = target.which === "end" ? timeToHHMM(selected) : (_b = existing == null ? void 0 : existing.end_time) != null ? _b : data.end_time;
+        setDayHours(target.dayDate, st, et);
+      } else {
+        set(target.field, timeToHHMM(selected));
+      }
+    };
     const setDayHours = (day, startT, endT) => {
       setData((d) => {
         const others = d.days.filter((x) => x.day_date !== day);
@@ -188,58 +237,52 @@
         multiline: true
       }
     ), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.row }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Start Date *"), /* @__PURE__ */ import_react.default.createElement(
-      import_react_native.TextInput,
+      import_react_native.Pressable,
       {
-        style: styles.input,
-        value: data.start_date,
-        onChangeText: (v) => set("start_date", v),
-        placeholder: "2026-04-11"
-      }
+        style: styles.pickerField,
+        onPress: () => setPicker({ kind: "date", field: "start_date" })
+      },
+      /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: data.start_date ? styles.pickerText : styles.pickerPlaceholder }, data.start_date || "Select date")
     )), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "End Date"), /* @__PURE__ */ import_react.default.createElement(
-      import_react_native.TextInput,
+      import_react_native.Pressable,
       {
-        style: styles.input,
-        value: data.end_date,
-        onChangeText: (v) => set("end_date", v),
-        placeholder: "2026-04-11"
-      }
+        style: styles.pickerField,
+        onPress: () => setPicker({ kind: "date", field: "end_date" })
+      },
+      /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: data.end_date ? styles.pickerText : styles.pickerPlaceholder }, data.end_date || "Optional")
     ))), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.row }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, multiDay ? "Default Start Time *" : "Start Time *"), /* @__PURE__ */ import_react.default.createElement(
-      import_react_native.TextInput,
+      import_react_native.Pressable,
       {
-        style: styles.input,
-        value: data.start_time,
-        onChangeText: (v) => set("start_time", v),
-        placeholder: "08:00"
-      }
+        style: styles.pickerField,
+        onPress: () => setPicker({ kind: "time", field: "start_time" })
+      },
+      /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: data.start_time ? styles.pickerText : styles.pickerPlaceholder }, data.start_time || "Select time")
     )), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, multiDay ? "Default End Time *" : "End Time *"), /* @__PURE__ */ import_react.default.createElement(
-      import_react_native.TextInput,
+      import_react_native.Pressable,
       {
-        style: styles.input,
-        value: data.end_time,
-        onChangeText: (v) => set("end_time", v),
-        placeholder: "14:00"
-      }
+        style: styles.pickerField,
+        onPress: () => setPicker({ kind: "time", field: "end_time" })
+      },
+      /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: data.end_time ? styles.pickerText : styles.pickerPlaceholder }, data.end_time || "Select time")
     ))), multiDay ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Per-day hours"), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.hint }, "Adjust any day if hours differ from the defaults above."), rangeDates.map((d) => {
       var _a, _b;
       const override = data.days.find((x) => x.day_date === d);
       const st = (_a = override == null ? void 0 : override.start_time) != null ? _a : data.start_time;
       const et = (_b = override == null ? void 0 : override.end_time) != null ? _b : data.end_time;
       return /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { key: d, style: styles.dayRow }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.dayDate }, d), /* @__PURE__ */ import_react.default.createElement(
-        import_react_native.TextInput,
+        import_react_native.Pressable,
         {
-          style: [styles.input, styles.dayInput],
-          value: st,
-          onChangeText: (v) => setDayHours(d, v, et),
-          placeholder: "08:00"
-        }
+          style: [styles.pickerField, styles.dayInput],
+          onPress: () => setPicker({ kind: "time", dayDate: d, which: "start" })
+        },
+        /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.pickerText }, st)
       ), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.dayDash }, "\u2013"), /* @__PURE__ */ import_react.default.createElement(
-        import_react_native.TextInput,
+        import_react_native.Pressable,
         {
-          style: [styles.input, styles.dayInput],
-          value: et,
-          onChangeText: (v) => setDayHours(d, st, v),
-          placeholder: "14:00"
-        }
+          style: [styles.pickerField, styles.dayInput],
+          onPress: () => setPicker({ kind: "time", dayDate: d, which: "end" })
+        },
+        /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.pickerText }, et)
       ));
     })) : null, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Tags"), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.tagRow }, tagVocab.map((tag) => {
       const active = data.tags.includes(tag);
@@ -252,7 +295,28 @@
         },
         /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: [styles.tagText, active && styles.tagTextActive] }, tag)
       );
-    })), /* @__PURE__ */ import_react.default.createElement(
+    })), picker ? /* @__PURE__ */ import_react.default.createElement(
+      import_datetimepicker.default,
+      {
+        mode: picker.kind,
+        value: (() => {
+          var _a, _b;
+          if (picker.kind === "date") {
+            const iso = data[picker.field] || data.start_date;
+            return parseIsoDate(iso);
+          }
+          if ("dayDate" in picker) {
+            const row = data.days.find((x) => x.day_date === picker.dayDate);
+            const hhmm = (picker.which === "start" ? (_a = row == null ? void 0 : row.start_time) != null ? _a : data.start_time : (_b = row == null ? void 0 : row.end_time) != null ? _b : data.end_time) || "09:00";
+            return parseHHMM(hhmm);
+          }
+          return parseHHMM(data[picker.field] || "09:00");
+        })(),
+        onChange: onPickerChange,
+        is24Hour: false,
+        display: import_react_native.Platform.OS === "ios" ? "spinner" : "default"
+      }
+    ) : null, /* @__PURE__ */ import_react.default.createElement(
       import_react_native.TouchableOpacity,
       {
         style: [styles.button, submitting && styles.buttonDisabled],
@@ -319,6 +383,17 @@
     tagText: { fontSize: 13, color: "#334155", fontWeight: "600" },
     tagTextActive: { color: "#fff" },
     hint: { fontSize: 12, color: "#64748b", marginBottom: 8 },
+    pickerField: {
+      borderWidth: 1,
+      borderColor: "#ccc",
+      borderRadius: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+      backgroundColor: "#fff",
+      justifyContent: "center"
+    },
+    pickerText: { fontSize: 16, color: "#0f172a" },
+    pickerPlaceholder: { fontSize: 16, color: "#94a3b8" },
     dayRow: {
       flexDirection: "row",
       alignItems: "center",

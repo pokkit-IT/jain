@@ -19,7 +19,7 @@ await build({
   platform: "neutral",
   target: "es2016",
   jsx: "transform",
-  external: ["react", "react-native"],
+  external: ["react", "react-native", "@react-native-community/datetimepicker"],
   loader: { ".tsx": "tsx", ".ts": "ts" },
   logLevel: "info",
 });

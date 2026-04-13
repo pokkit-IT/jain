@@ -4,9 +4,49 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   ScrollView,
+  Platform,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+function dateToIso(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function timeToHHMM(d: Date): string {
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function parseIsoDate(iso: string): Date {
+  if (iso) {
+    const d = new Date(iso + "T00:00:00");
+    if (!isNaN(d.getTime())) return d;
+  }
+  return new Date();
+}
+
+function parseHHMM(s: string): Date {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  if (s && /^\d{1,2}:\d{2}$/.test(s)) {
+    const [h, m] = s.split(":").map(Number);
+    d.setHours(h, m);
+  } else {
+    d.setHours(9, 0);
+  }
+  return d;
+}
+
+type PickerTarget =
+  | { kind: "date"; field: "start_date" | "end_date" }
+  | { kind: "time"; field: "start_time" | "end_time" }
+  | { kind: "time"; dayDate: string; which: "start" | "end" };
 
 const FALLBACK_TAGS = [
   "Furniture", "Toys", "Tools", "Baby Items", "Clothing",
@@ -92,6 +132,32 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
 
   const rangeDates = datesInRange(data.start_date, data.end_date);
   const multiDay = rangeDates.length > 1;
+  const [picker, setPicker] = useState<PickerTarget | null>(null);
+
+  const onPickerChange = (event: any, selected?: Date) => {
+    // Android fires with event.type="dismissed" on cancel. iOS fires
+    // on every spin but the modal closes via a "done" button; we close
+    // ourselves to keep the UX consistent across platforms.
+    const dismissed = event?.type === "dismissed";
+    const target = picker;
+    setPicker(null);
+    if (!selected || !target || dismissed) return;
+
+    if (target.kind === "date") {
+      set(target.field, dateToIso(selected));
+      // If they pushed end_date below start_date, auto-fix end_date.
+      if (target.field === "start_date" && data.end_date && data.end_date < dateToIso(selected)) {
+        set("end_date", dateToIso(selected));
+      }
+    } else if ("dayDate" in target) {
+      const existing = data.days.find((x) => x.day_date === target.dayDate);
+      const st = target.which === "start" ? timeToHHMM(selected) : (existing?.start_time ?? data.start_time);
+      const et = target.which === "end" ? timeToHHMM(selected) : (existing?.end_time ?? data.end_time);
+      setDayHours(target.dayDate, st, et);
+    } else {
+      set(target.field, timeToHHMM(selected));
+    }
+  };
 
   const setDayHours = (day: string, startT: string, endT: string) => {
     setData((d) => {
@@ -200,21 +266,25 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
       <View style={styles.row}>
         <View style={styles.half}>
           <Text style={styles.label}>Start Date *</Text>
-          <TextInput
-            style={styles.input}
-            value={data.start_date}
-            onChangeText={(v) => set("start_date", v)}
-            placeholder="2026-04-11"
-          />
+          <Pressable
+            style={styles.pickerField}
+            onPress={() => setPicker({ kind: "date", field: "start_date" })}
+          >
+            <Text style={data.start_date ? styles.pickerText : styles.pickerPlaceholder}>
+              {data.start_date || "Select date"}
+            </Text>
+          </Pressable>
         </View>
         <View style={styles.half}>
           <Text style={styles.label}>End Date</Text>
-          <TextInput
-            style={styles.input}
-            value={data.end_date}
-            onChangeText={(v) => set("end_date", v)}
-            placeholder="2026-04-11"
-          />
+          <Pressable
+            style={styles.pickerField}
+            onPress={() => setPicker({ kind: "date", field: "end_date" })}
+          >
+            <Text style={data.end_date ? styles.pickerText : styles.pickerPlaceholder}>
+              {data.end_date || "Optional"}
+            </Text>
+          </Pressable>
         </View>
       </View>
 
@@ -223,23 +293,27 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
           <Text style={styles.label}>
             {multiDay ? "Default Start Time *" : "Start Time *"}
           </Text>
-          <TextInput
-            style={styles.input}
-            value={data.start_time}
-            onChangeText={(v) => set("start_time", v)}
-            placeholder="08:00"
-          />
+          <Pressable
+            style={styles.pickerField}
+            onPress={() => setPicker({ kind: "time", field: "start_time" })}
+          >
+            <Text style={data.start_time ? styles.pickerText : styles.pickerPlaceholder}>
+              {data.start_time || "Select time"}
+            </Text>
+          </Pressable>
         </View>
         <View style={styles.half}>
           <Text style={styles.label}>
             {multiDay ? "Default End Time *" : "End Time *"}
           </Text>
-          <TextInput
-            style={styles.input}
-            value={data.end_time}
-            onChangeText={(v) => set("end_time", v)}
-            placeholder="14:00"
-          />
+          <Pressable
+            style={styles.pickerField}
+            onPress={() => setPicker({ kind: "time", field: "end_time" })}
+          >
+            <Text style={data.end_time ? styles.pickerText : styles.pickerPlaceholder}>
+              {data.end_time || "Select time"}
+            </Text>
+          </Pressable>
         </View>
       </View>
 
@@ -256,19 +330,19 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
             return (
               <View key={d} style={styles.dayRow}>
                 <Text style={styles.dayDate}>{d}</Text>
-                <TextInput
-                  style={[styles.input, styles.dayInput]}
-                  value={st}
-                  onChangeText={(v) => setDayHours(d, v, et)}
-                  placeholder="08:00"
-                />
+                <Pressable
+                  style={[styles.pickerField, styles.dayInput]}
+                  onPress={() => setPicker({ kind: "time", dayDate: d, which: "start" })}
+                >
+                  <Text style={styles.pickerText}>{st}</Text>
+                </Pressable>
                 <Text style={styles.dayDash}>–</Text>
-                <TextInput
-                  style={[styles.input, styles.dayInput]}
-                  value={et}
-                  onChangeText={(v) => setDayHours(d, st, v)}
-                  placeholder="14:00"
-                />
+                <Pressable
+                  style={[styles.pickerField, styles.dayInput]}
+                  onPress={() => setPicker({ kind: "time", dayDate: d, which: "end" })}
+                >
+                  <Text style={styles.pickerText}>{et}</Text>
+                </Pressable>
               </View>
             );
           })}
@@ -292,6 +366,29 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
           );
         })}
       </View>
+
+      {picker ? (
+        <DateTimePicker
+          mode={picker.kind}
+          value={(() => {
+            if (picker.kind === "date") {
+              const iso = data[picker.field] || data.start_date;
+              return parseIsoDate(iso);
+            }
+            if ("dayDate" in picker) {
+              const row = data.days.find((x) => x.day_date === picker.dayDate);
+              const hhmm = (picker.which === "start"
+                ? (row?.start_time ?? data.start_time)
+                : (row?.end_time ?? data.end_time)) || "09:00";
+              return parseHHMM(hhmm);
+            }
+            return parseHHMM(data[picker.field] || "09:00");
+          })()}
+          onChange={onPickerChange}
+          is24Hour={false}
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+        />
+      ) : null}
 
       <TouchableOpacity
         style={[styles.button, submitting && styles.buttonDisabled]}
@@ -363,6 +460,17 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 13, color: "#334155", fontWeight: "600" },
   tagTextActive: { color: "#fff" },
   hint: { fontSize: 12, color: "#64748b", marginBottom: 8 },
+  pickerField: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+  },
+  pickerText: { fontSize: 16, color: "#0f172a" },
+  pickerPlaceholder: { fontSize: 16, color: "#94a3b8" },
   dayRow: {
     flexDirection: "row",
     alignItems: "center",

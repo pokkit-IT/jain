@@ -70,7 +70,7 @@ def test_get_registry_runs_internal_loader(monkeypatch, tmp_path):
 
 async def test_external_loader_reads_installed_plugins_table():
     import json
-    from datetime import datetime
+    from datetime import datetime, timezone
     from uuid import uuid4
 
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -107,7 +107,7 @@ async def test_external_loader_reads_installed_plugins_table():
             manifest_json=json.dumps(manifest),
             service_key="sk-1",
             bundle_path=None,
-            installed_at=datetime.utcnow(),
+            installed_at=datetime.now(timezone.utc),
             installed_by=user.id,
         ))
         await s.commit()

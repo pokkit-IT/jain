@@ -28,7 +28,7 @@ Two state mismatches between the spec and the current code base that every task 
 - Modify: `backend/app/plugins/schema.py`
 - Test: `backend/tests/test_plugin_schema.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `backend/tests/test_plugin_schema.py`:
 
@@ -62,12 +62,12 @@ def test_plugin_manifest_type_rejects_garbage():
         )
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_plugin_schema.py::test_plugin_manifest_type_defaults_to_external -v`
 Expected: FAIL with `AttributeError: 'PluginManifest' object has no attribute 'type'` or equivalent.
 
-- [ ] **Step 3: Add the field**
+- [x] **Step 3: Add the field**
 
 Edit `backend/app/plugins/schema.py`. Change the import line to include `Literal`:
 
@@ -90,12 +90,12 @@ class PluginManifest(BaseModel):
     assets: list[str] = Field(default_factory=list)
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd backend && pytest tests/test_plugin_schema.py -v`
 Expected: PASS on the three new tests and all pre-existing tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/plugins/schema.py backend/tests/test_plugin_schema.py
@@ -110,7 +110,7 @@ git commit -m "feat(plugins): add type discriminator to PluginManifest"
 - Modify: `backend/app/plugins/schema.py`
 - Test: `backend/tests/test_plugin_schema.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_plugin_schema.py`:
 
@@ -134,12 +134,12 @@ def test_tool_def_handler_accepts_async_callable():
     assert t.handler is h
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_plugin_schema.py::test_tool_def_handler_defaults_to_none -v`
 Expected: FAIL with attribute error on `handler`.
 
-- [ ] **Step 3: Add the field**
+- [x] **Step 3: Add the field**
 
 Edit `backend/app/plugins/schema.py`. Update the top of the file and `ToolDef`:
 
@@ -179,12 +179,12 @@ class ToolDef(BaseModel):
 
 The `exclude=True` keeps `handler` out of serialized manifest JSON so `/api/plugins` responses stay clean.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd backend && pytest tests/test_plugin_schema.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/plugins/schema.py backend/tests/test_plugin_schema.py
@@ -199,7 +199,7 @@ git commit -m "feat(plugins): add ToolDef.handler callable for internal plugins"
 - Modify: `backend/app/models/installed_plugin.py`
 - Test: `backend/tests/test_installed_plugin_model.py` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_installed_plugin_model.py`:
 
@@ -253,12 +253,12 @@ async def test_installed_plugin_has_spec_columns(session: AsyncSession):
     assert got.installed_by == user.id
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_installed_plugin_model.py -v`
 Expected: FAIL — current model columns are `id, name, version, enabled`, not the spec shape.
 
-- [ ] **Step 3: Rewrite the model**
+- [x] **Step 3: Rewrite the model**
 
 Replace the entire contents of `backend/app/models/installed_plugin.py`:
 
@@ -294,17 +294,17 @@ class InstalledPlugin(Base):
     )
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_installed_plugin_model.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Also run the full suite to confirm no consumer depends on the old columns**
+- [x] **Step 5: Also run the full suite to confirm no consumer depends on the old columns**
 
 Run: `cd backend && pytest -x`
 Expected: PASS (no other code currently touches `InstalledPlugin`).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/models/installed_plugin.py backend/tests/test_installed_plugin_model.py
@@ -319,7 +319,7 @@ git commit -m "refactor(models): rewrite InstalledPlugin to match phase 3 spec"
 - Modify: `backend/app/plugins/registry.py`
 - Test: `backend/tests/test_plugin_registry.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `backend/tests/test_plugin_registry.py`:
 
@@ -363,12 +363,12 @@ def test_registry_unregister_missing_name_is_noop(tmp_path):
     r.unregister("never-existed")  # must not raise
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd backend && pytest tests/test_plugin_registry.py::test_registry_register_adds_plugin -v`
 Expected: FAIL — `PluginRegistry` has no `register` method.
 
-- [ ] **Step 3: Add mutable methods**
+- [x] **Step 3: Add mutable methods**
 
 Edit `backend/app/plugins/registry.py`, adding these methods to `PluginRegistry`:
 
@@ -386,12 +386,12 @@ Edit `backend/app/plugins/registry.py`, adding these methods to `PluginRegistry`
         self._plugins.pop(name, None)
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd backend && pytest tests/test_plugin_registry.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/plugins/registry.py backend/tests/test_plugin_registry.py
@@ -405,14 +405,14 @@ git commit -m "feat(plugins): make PluginRegistry mutable with register/unregist
 **Files:**
 - Modify: `backend/app/dependencies.py`
 
-- [ ] **Step 1: Verification-first — read current caching**
+- [x] **Step 1: Verification-first — read current caching**
 
 The registry is cached via `@lru_cache(maxsize=1)`. This is fine for startup-loaded plugins but will bite us in Stage 4 when `/api/plugins/install` mutates the registry from a different request context. The cache itself is not the problem (it's a module-level singleton cache, not per-request) but we must guarantee the same instance is returned across the install endpoint and the chat service. Verify current behavior: singleton is shared.
 
 Run: `cd backend && python -c "from app.dependencies import get_registry; a=get_registry(); b=get_registry(); print(a is b)"`
 Expected: `True`.
 
-- [ ] **Step 2: Add a helper that exposes the raw singleton for mutation**
+- [x] **Step 2: Add a helper that exposes the raw singleton for mutation**
 
 Edit `backend/app/dependencies.py`. Append:
 
@@ -425,12 +425,12 @@ def reset_registry_for_tests() -> None:
 
 No behavior change for production — just a test hook. The existing `@lru_cache` is kept because it DOES return the same instance to every caller.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `cd backend && pytest -x`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/app/dependencies.py
@@ -444,17 +444,17 @@ git commit -m "chore(deps): expose reset_registry_for_tests helper"
 **Files:**
 - None — verification only.
 
-- [ ] **Step 1: Run all backend tests**
+- [x] **Step 1: Run all backend tests**
 
 Run: `cd backend && pytest -v`
 Expected: All Phase 2B tests pass. If anything fails, STOP and investigate before proceeding — Stage 1 must be non-breaking.
 
-- [ ] **Step 2: Run the backend in dev mode for 30 seconds**
+- [x] **Step 2: Run the backend in dev mode for 30 seconds**
 
 Run: `cd backend && uvicorn app.main:app --port 8000` (Ctrl+C after 30 s).
 Expected: No errors at startup. `[App] loaded plugins: ['yardsailing']` in logs (it still loads the old external manifest from `../jain-plugins/plugins`).
 
-- [ ] **Step 3: No commit — this is a verification step, nothing changed.**
+- [x] **Step 3: No commit — this is a verification step, nothing changed.**
 
 ---
 
@@ -472,7 +472,7 @@ Expected: No errors at startup. `[App] loaded plugins: ['yardsailing']` in logs 
 
 **Rationale:** The spec wants `app/plugins/<name>/` for plugin packages, but we already have `app/plugins/schema.py` etc. Moving the core files to `app/plugins/core/` eliminates the namespace collision without breaking anything.
 
-- [ ] **Step 1: Find all call sites**
+- [x] **Step 1: Find all call sites**
 
 Run: `cd backend && grep -rn "app.plugins.schema\|app.plugins.registry\|app.plugins.loader\|from .schema\|from .loader\|from .registry" app tests`
 
@@ -489,7 +489,7 @@ Expected output lists every file that needs updating. Make a note — the set is
 - `tests/test_tool_executor.py`
 - Internal cross-references inside `app/plugins/registry.py` and `app/plugins/loader.py`.
 
-- [ ] **Step 2: Create the new package layout**
+- [x] **Step 2: Create the new package layout**
 
 Create `backend/app/plugins/__init__.py` with empty contents (just an empty file — the package marker).
 
@@ -521,7 +521,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 3: Move the three files**
+- [x] **Step 3: Move the three files**
 
 ```bash
 git mv backend/app/plugins/schema.py backend/app/plugins/core/schema.py
@@ -529,13 +529,13 @@ git mv backend/app/plugins/registry.py backend/app/plugins/core/registry.py
 git mv backend/app/plugins/loader.py backend/app/plugins/core/loader.py
 ```
 
-- [ ] **Step 4: Fix intra-package imports**
+- [x] **Step 4: Fix intra-package imports**
 
 Inside `backend/app/plugins/core/registry.py`, the `from .loader import ...` and `from .schema import ...` lines already use relative imports and still resolve inside `core/` — no change needed.
 
 Inside `backend/app/plugins/core/loader.py`, same story.
 
-- [ ] **Step 5: Update all external call sites with `replace_all`**
+- [x] **Step 5: Update all external call sites with `replace_all`**
 
 In each of the files listed in Step 1, replace:
 - `from app.plugins.schema` → `from app.plugins.core.schema`
@@ -566,13 +566,13 @@ The specific files and lines:
 
 `backend/tests/test_tool_executor.py`: `from app.plugins.registry import PluginRegistry` → `from app.plugins.core.registry import PluginRegistry`.
 
-- [ ] **Step 6: Run the full test suite**
+- [x] **Step 6: Run the full test suite**
 
 Run: `cd backend && pytest -x -v`
 Expected: All tests still pass. If any test fails on an import error, grep again for stragglers:
 `cd backend && grep -rn "app\.plugins\.schema\|app\.plugins\.registry\|app\.plugins\.loader" app tests`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app/plugins/ backend/app/dependencies.py backend/app/engine/tool_executor.py backend/app/routers/plugins.py backend/app/schemas/plugin.py backend/app/services/chat_service.py backend/app/services/context_builder.py backend/tests/test_plugin_loader.py backend/tests/test_plugin_registry.py backend/tests/test_plugin_schema.py backend/tests/test_tool_executor.py
@@ -588,7 +588,7 @@ git commit -m "refactor(plugins): move core files to app/plugins/core/ to free a
 - Modify: `backend/app/plugins/core/__init__.py`
 - Test: `backend/tests/test_plugin_types.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_plugin_types.py`:
 
@@ -631,12 +631,12 @@ def test_plugin_registration_optional_fields_default():
     assert reg.ui_components == []
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_plugin_types.py -v`
 Expected: FAIL with `ModuleNotFoundError: app.plugins.core.types`.
 
-- [ ] **Step 3: Create the types module**
+- [x] **Step 3: Create the types module**
 
 Create `backend/app/plugins/core/types.py`:
 
@@ -698,12 +698,12 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_plugin_types.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/plugins/core/types.py backend/app/plugins/core/__init__.py backend/tests/test_plugin_types.py
@@ -718,7 +718,7 @@ git commit -m "feat(plugins): add PluginRegistration dataclass"
 - Create: `backend/app/plugins/core/loaders.py`
 - Test: `backend/tests/test_plugin_loaders.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_plugin_loaders.py`:
 
@@ -766,12 +766,12 @@ def test_external_loader_reads_existing_filesystem_path(tmp_path):
     assert "small-talk" in names
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_plugin_loaders.py -v`
 Expected: FAIL on `ModuleNotFoundError: app.plugins.core.loaders`.
 
-- [ ] **Step 3: Implement loaders**
+- [x] **Step 3: Implement loaders**
 
 Create `backend/app/plugins/core/loaders.py`:
 
@@ -889,12 +889,12 @@ class ExternalPluginLoader:
             registry.register(plugin)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_plugin_loaders.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/plugins/core/loaders.py backend/tests/test_plugin_loaders.py
@@ -909,7 +909,7 @@ git commit -m "feat(plugins): split loader into InternalPluginLoader/ExternalPlu
 - Modify: `backend/app/dependencies.py`
 - Test: `backend/tests/test_plugin_loaders.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_plugin_loaders.py`:
 
@@ -950,12 +950,12 @@ def test_get_registry_runs_both_loaders(monkeypatch, tmp_path):
     dependencies.reset_registry_for_tests()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_plugin_loaders.py::test_get_registry_runs_both_loaders -v`
 Expected: FAIL (loaders aren't wired yet).
 
-- [ ] **Step 3: Rewrite `_registry_singleton`**
+- [x] **Step 3: Rewrite `_registry_singleton`**
 
 Edit `backend/app/dependencies.py`:
 
@@ -1014,7 +1014,7 @@ def reset_registry_for_tests() -> None:
     _chat_service_singleton.cache_clear()
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd backend && pytest tests/test_plugin_loaders.py -v`
 Expected: PASS.
@@ -1022,7 +1022,7 @@ Expected: PASS.
 Run: `cd backend && pytest -x`
 Expected: All tests pass. Note that startup-time plugin loading from `tests/fixtures/plugins/` is NOT touched here — individual tests use their own `PluginRegistry` instances.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/dependencies.py backend/tests/test_plugin_loaders.py
@@ -1037,7 +1037,7 @@ git commit -m "feat(plugins): wire internal+external loaders into registry singl
 - Modify: `backend/app/engine/tool_executor.py`
 - Test: `backend/tests/test_tool_executor.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_tool_executor.py`:
 
@@ -1082,12 +1082,12 @@ async def test_execute_calls_handler_for_internal_tool():
     assert json.loads(result.content) == {"greeting": "hi"}
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_tool_executor.py::test_execute_calls_handler_for_internal_tool -v`
 Expected: FAIL — executor still tries to read `plugin.manifest.api` and errors on the internal plugin.
 
-- [ ] **Step 3: Fork the executor**
+- [x] **Step 3: Fork the executor**
 
 Edit `backend/app/engine/tool_executor.py`. In the `execute` method, insert this block immediately after the `ui_component` branch and BEFORE the `if plugin.manifest.api is None:` check:
 
@@ -1124,12 +1124,12 @@ Edit `backend/app/engine/tool_executor.py`. In the `execute` method, insert this
 
 Note: `db=None` here is a temporary placeholder. Stage 3 introduces a DB-session injection mechanism when we wire the yardsailing handler to a real SQLAlchemy session.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_tool_executor.py -v`
 Expected: PASS on the new test AND all Phase 2B tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/engine/tool_executor.py backend/tests/test_tool_executor.py
@@ -1148,7 +1148,7 @@ git commit -m "feat(executor): fork tool dispatch on ToolDef.handler for interna
 
 **Why:** `db=None` in Task 11 is a footgun. Internal handlers need a real `AsyncSession`. Wire `db` through `ChatService.send` → `ToolExecutor.execute` from the FastAPI `Depends(get_db)` chain in the chat router.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_tool_executor.py`:
 
@@ -1191,12 +1191,12 @@ async def test_handler_receives_db_session_when_provided():
     assert captured["db"] is fake_session
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_tool_executor.py::test_handler_receives_db_session_when_provided -v`
 Expected: FAIL — `ToolExecutor.execute` has no `db` parameter yet.
 
-- [ ] **Step 3: Add `db` parameter to executor**
+- [x] **Step 3: Add `db` parameter to executor**
 
 Edit `backend/app/engine/tool_executor.py`. Change the execute signature:
 
@@ -1222,7 +1222,7 @@ Update the handler dispatch to pass `db`:
                 payload = await tool.handler(call.arguments, user=user, db=db)
 ```
 
-- [ ] **Step 4: Thread `db` through `ChatService.send`**
+- [x] **Step 4: Thread `db` through `ChatService.send`**
 
 Edit `backend/app/services/chat_service.py`. Add `db` parameter to `send`:
 
@@ -1247,7 +1247,7 @@ Inside `send`, change the `tool_executor.execute` call to pass `db`:
                 result = await self.tool_executor.execute(call, user=user, db=db)
 ```
 
-- [ ] **Step 5: Thread `db` through the chat router**
+- [x] **Step 5: Thread `db` through the chat router**
 
 Find the chat router handler. Run: `cd backend && grep -n "chat_service.send\|get_chat_service" app/routers/chat.py`.
 
@@ -1265,12 +1265,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 ```
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run: `cd backend && pytest tests/test_tool_executor.py tests/test_chat_service.py tests/test_chat_router.py -v`
 Expected: PASS. If `test_chat_service.py` calls `send` without passing `db`, the default `None` keeps old tests green.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app/engine/tool_executor.py backend/app/services/chat_service.py backend/app/routers/chat.py backend/tests/test_tool_executor.py
@@ -1285,7 +1285,7 @@ git commit -m "feat(executor): thread AsyncSession through chat to internal hand
 - Modify: `backend/app/routers/plugins.py`
 - Test: `backend/tests/test_plugins_router.py` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_plugins_router.py`:
 
@@ -1334,12 +1334,12 @@ async def test_plugin_call_dispatches_internally(client, registered_internal_plu
     assert resp.json() == {"echoed": {"hello": "world"}}
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_plugins_router.py -v`
 Expected: FAIL — current proxy attempts httpx on `plugin.manifest.api`, which is None for internal plugins, so it returns 400.
 
-- [ ] **Step 3: Add internal-dispatch branch to the proxy**
+- [x] **Step 3: Add internal-dispatch branch to the proxy**
 
 Edit `backend/app/routers/plugins.py`. At the top of `call_plugin_api`, after the `plugin is None` check and BEFORE the `plugin.manifest.api is None` check, add:
 
@@ -1423,12 +1423,12 @@ async def _dispatch_internal(
 
 Note the limitation: this naive dispatcher only handles a single body arg. Stage 3 Task 24 upgrades it to build a proper ASGI `Request` for routes that use `Depends(get_db)` and `Depends(get_current_user)`.
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd backend && pytest tests/test_plugins_router.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/routers/plugins.py backend/tests/test_plugins_router.py
@@ -1444,7 +1444,7 @@ git commit -m "feat(proxy): dispatch /api/plugins/{name}/call internally for int
 - Create: `backend/app/plugins/_hello/plugin.json`
 - Test: `backend/tests/test_hello_plugin.py`
 
-- [ ] **Step 1: Write the failing end-to-end test**
+- [x] **Step 1: Write the failing end-to-end test**
 
 Create `backend/tests/test_hello_plugin.py`:
 
@@ -1483,12 +1483,12 @@ async def test_hello_plugin_end_to_end():
     assert payload == {"greeting": "hi, jim"}
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_hello_plugin.py -v`
 Expected: FAIL — plugin doesn't exist yet.
 
-- [ ] **Step 3: Create the plugin package**
+- [x] **Step 3: Create the plugin package**
 
 Create `backend/app/plugins/_hello/__init__.py`:
 
@@ -1544,17 +1544,17 @@ Create `backend/app/plugins/_hello/plugin.json`:
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_hello_plugin.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `cd backend && pytest -x`
 Expected: all pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/plugins/_hello/ backend/tests/test_hello_plugin.py
@@ -1569,19 +1569,19 @@ git commit -m "test(plugins): add _hello throwaway internal plugin end-to-end"
 - Delete: `backend/app/plugins/_hello/`
 - Delete: `backend/tests/test_hello_plugin.py`
 
-- [ ] **Step 1: Remove the plugin and its test**
+- [x] **Step 1: Remove the plugin and its test**
 
 ```bash
 rm -rf backend/app/plugins/_hello
 rm backend/tests/test_hello_plugin.py
 ```
 
-- [ ] **Step 2: Run suite to confirm nothing depended on it**
+- [x] **Step 2: Run suite to confirm nothing depended on it**
 
 Run: `cd backend && pytest -x`
 Expected: PASS.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add -u backend/app/plugins backend/tests/test_hello_plugin.py
@@ -1598,7 +1598,7 @@ git commit -m "chore(plugins): remove _hello scaffolding plugin"
 - Create: `backend/app/plugins/yardsailing/__init__.py`
 - Create: `backend/app/plugins/yardsailing/plugin.json`
 
-- [ ] **Step 1: Create the package directory and stub __init__.py**
+- [x] **Step 1: Create the package directory and stub __init__.py**
 
 Create `backend/app/plugins/yardsailing/__init__.py`:
 
@@ -1652,9 +1652,9 @@ Create `backend/app/plugins/yardsailing/plugin.json`:
 }
 ```
 
-- [ ] **Step 2: No test yet — the package imports will fail until models/routes/tools exist. Skip verification; next tasks fill them in.**
+- [x] **Step 2: No test yet — the package imports will fail until models/routes/tools exist. Skip verification; next tasks fill them in.**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/app/plugins/yardsailing/__init__.py backend/app/plugins/yardsailing/plugin.json
@@ -1669,7 +1669,7 @@ git commit -m "feat(yardsailing): scaffold internal plugin package"
 - Create: `backend/app/plugins/yardsailing/models.py`
 - Test: `backend/tests/plugins/yardsailing/test_models.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/plugins/__init__.py` (empty file for the test package).
 Create `backend/tests/plugins/yardsailing/__init__.py` (empty).
@@ -1726,12 +1726,12 @@ async def test_sale_model_persist_and_load(session):
     assert isinstance(got.created_at, datetime)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/plugins/yardsailing/test_models.py -v`
 Expected: FAIL on `ModuleNotFoundError: app.plugins.yardsailing.models`.
 
-- [ ] **Step 3: Write the model**
+- [x] **Step 3: Write the model**
 
 Create `backend/app/plugins/yardsailing/models.py`:
 
@@ -1777,12 +1777,12 @@ class Sale(Base):
     owner: Mapped[User] = relationship()
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/plugins/yardsailing/test_models.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/plugins/yardsailing/models.py backend/tests/plugins/__init__.py backend/tests/plugins/yardsailing/__init__.py backend/tests/plugins/yardsailing/test_models.py
@@ -1797,7 +1797,7 @@ git commit -m "feat(yardsailing): add Sale model with users FK"
 - Create: `backend/app/plugins/yardsailing/services.py`
 - Test: `backend/tests/plugins/yardsailing/test_services.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/plugins/yardsailing/test_services.py`:
 
@@ -1876,12 +1876,12 @@ async def test_get_sale_by_id_returns_none_when_missing(session_and_user):
     assert await get_sale_by_id(session, "does-not-exist") is None
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/plugins/yardsailing/test_services.py -v`
 Expected: FAIL — module does not exist.
 
-- [ ] **Step 3: Implement services**
+- [x] **Step 3: Implement services**
 
 Create `backend/app/plugins/yardsailing/services.py`:
 
@@ -1937,12 +1937,12 @@ async def get_sale_by_id(db: AsyncSession, sale_id: str) -> Sale | None:
     return await db.get(Sale, sale_id)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/plugins/yardsailing/test_services.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/plugins/yardsailing/services.py backend/tests/plugins/yardsailing/test_services.py
@@ -1957,7 +1957,7 @@ git commit -m "feat(yardsailing): create_sale / list_sales_for_owner / get_sale_
 - Create: `backend/app/plugins/yardsailing/routes.py`
 - Test: `backend/tests/plugins/yardsailing/test_routes.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/plugins/yardsailing/test_routes.py`:
 
@@ -2041,12 +2041,12 @@ async def test_get_my_sales_lists_own_rows(app_and_token):
     assert rows[0]["title"] == "One"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/plugins/yardsailing/test_routes.py -v`
 Expected: FAIL — routes module doesn't exist AND yardsailing isn't mounted yet.
 
-- [ ] **Step 3: Create routes module**
+- [x] **Step 3: Create routes module**
 
 Create `backend/app/plugins/yardsailing/routes.py`:
 
@@ -2145,7 +2145,7 @@ async def get_sale_route(
     return SaleResponse.from_model(sale)
 ```
 
-- [ ] **Step 4: Mount the router**
+- [x] **Step 4: Mount the router**
 
 The router gets mounted by the internal plugin loader automatically when Stage 2 machinery registers the plugin. Verify by adding to `create_app` an explicit `include_router` walk over all registered internal plugins. Edit `backend/app/main.py`:
 
@@ -2182,12 +2182,12 @@ Inside `create_app`, after the existing `app.include_router` calls, add:
         app.include_router(registration.router)
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd backend && pytest tests/plugins/yardsailing/test_routes.py -v`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/plugins/yardsailing/routes.py backend/app/main.py backend/tests/plugins/yardsailing/test_routes.py
@@ -2202,7 +2202,7 @@ git commit -m "feat(yardsailing): add HTTP routes and mount internal plugin rout
 - Create: `backend/app/plugins/yardsailing/tools.py`
 - Test: `backend/tests/plugins/yardsailing/test_tools.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/plugins/yardsailing/test_tools.py`:
 
@@ -2284,12 +2284,12 @@ async def test_create_yard_sale_handler_rejects_missing_user(session_and_user):
     assert result["error"] == "auth_required"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/plugins/yardsailing/test_tools.py -v`
 Expected: FAIL — module missing.
 
-- [ ] **Step 3: Implement tools**
+- [x] **Step 3: Implement tools**
 
 Create `backend/app/plugins/yardsailing/tools.py`:
 
@@ -2391,12 +2391,12 @@ TOOLS = [
 ]
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd backend && pytest tests/plugins/yardsailing/test_tools.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/plugins/yardsailing/tools.py backend/tests/plugins/yardsailing/test_tools.py
@@ -2410,14 +2410,14 @@ git commit -m "feat(yardsailing): add create_yard_sale and show_sale_form ToolDe
 **Files:**
 - Create: `backend/app/plugins/yardsailing/components/SaleForm.tsx`
 
-- [ ] **Step 1: Copy the file**
+- [x] **Step 1: Copy the file**
 
 ```bash
 mkdir -p backend/app/plugins/yardsailing/components
 cp C:/Users/jimsh/repos/jain-plugins/plugins/yardsailing/src/SaleForm.tsx backend/app/plugins/yardsailing/components/SaleForm.tsx
 ```
 
-- [ ] **Step 2: Update the API call path**
+- [x] **Step 2: Update the API call path**
 
 The old form POSTs to `/api/sales` (external convention). The new internal routes live at `/api/plugins/yardsailing/sales`, BUT the mobile PluginBridge wraps calls in `/api/plugins/{pluginName}/call` with body `{method, path, body}` where `path` is joined with the plugin's own prefix. For internal dispatch in Task 13, we pass `path` directly to the internal router lookup.
 
@@ -2433,7 +2433,7 @@ to:
       const result = await bridge.callPluginApi("/api/plugins/yardsailing/sales", "POST", data);
 ```
 
-- [ ] **Step 3: Add an index entry point for esbuild**
+- [x] **Step 3: Add an index entry point for esbuild**
 
 Create `backend/app/plugins/yardsailing/components/index.ts`:
 
@@ -2441,7 +2441,7 @@ Create `backend/app/plugins/yardsailing/components/index.ts`:
 export { SaleForm } from "./SaleForm";
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/app/plugins/yardsailing/components/
@@ -2457,7 +2457,7 @@ git commit -m "feat(yardsailing): copy SaleForm component into plugin package"
 - Create: `backend/app/plugins/yardsailing/package.json`
 - Create: `backend/app/plugins/yardsailing/bundle/yardsailing.js` (generated, committed)
 
-- [ ] **Step 1: Create package.json with esbuild devDep**
+- [x] **Step 1: Create package.json with esbuild devDep**
 
 Create `backend/app/plugins/yardsailing/package.json`:
 
@@ -2475,7 +2475,7 @@ Create `backend/app/plugins/yardsailing/package.json`:
 }
 ```
 
-- [ ] **Step 2: Create build script adapted from jain-plugins/tools/build.ts**
+- [x] **Step 2: Create build script adapted from jain-plugins/tools/build.ts**
 
 Create `backend/app/plugins/yardsailing/build.mjs`:
 
@@ -2509,7 +2509,7 @@ await build({
 console.log(`[yardsailing] built ${outfile}`);
 ```
 
-- [ ] **Step 3: Install deps and build**
+- [x] **Step 3: Install deps and build**
 
 ```bash
 cd backend/app/plugins/yardsailing && npm install && npm run build
@@ -2517,12 +2517,12 @@ cd backend/app/plugins/yardsailing && npm install && npm run build
 
 Expected: `bundle/yardsailing.js` is created (a file of ~5-50 kB).
 
-- [ ] **Step 4: Verify the bundle loads via the existing bundle endpoint**
+- [x] **Step 4: Verify the bundle loads via the existing bundle endpoint**
 
 Start JAIN: `cd backend && uvicorn app.main:app --port 8000` (briefly).
 Hit `curl http://localhost:8000/api/plugins/yardsailing/bundle` — expect the bundled JS (not 404). Ctrl+C to stop.
 
-- [ ] **Step 5: Commit bundle and build config**
+- [x] **Step 5: Commit bundle and build config**
 
 ```bash
 git add backend/app/plugins/yardsailing/build.mjs backend/app/plugins/yardsailing/package.json backend/app/plugins/yardsailing/bundle/yardsailing.js
@@ -2539,7 +2539,7 @@ git commit -m "build(yardsailing): esbuild config and initial UI bundle"
 **Files:**
 - Modify: `backend/app/database.py`
 
-- [ ] **Step 1: Verify autopickup**
+- [x] **Step 1: Verify autopickup**
 
 Because `app/plugins/yardsailing/models.py` imports `Base` from `app.models.base`, the model registers on `Base.metadata` AS LONG AS the module is imported before `init_db` runs `create_all`. The internal plugin loader imports the package during `get_registry()`, which happens at `_registry_singleton` cache time. Call order:
 
@@ -2558,7 +2558,7 @@ print([t.name for t in Base.metadata.tables.values() if 'yardsailing' in t.name]
 
 Expected: `['yardsailing_sales']`.
 
-- [ ] **Step 2: If the print shows empty, force-import in database.py**
+- [x] **Step 2: If the print shows empty, force-import in database.py**
 
 Only if Step 1 prints nothing — edit `backend/app/database.py` to add at the top of `init_db`:
 
@@ -2572,12 +2572,12 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
 ```
 
-- [ ] **Step 3: Run the full suite**
+- [x] **Step 3: Run the full suite**
 
 Run: `cd backend && pytest -x`
 Expected: PASS.
 
-- [ ] **Step 4: Commit only if database.py was modified**
+- [x] **Step 4: Commit only if database.py was modified**
 
 ```bash
 git add backend/app/database.py
@@ -2594,7 +2594,7 @@ git commit -m "chore(db): force-import yardsailing models before create_all"
 
 **Context:** Task 13's dispatcher is naive — it calls `route.endpoint(req.body)` directly, bypassing FastAPI's `Depends(get_current_user)`/`Depends(get_db)` resolution. The yardsailing route needs those. Replace the naive call with a synthetic ASGI request dispatched through FastAPI's real routing.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_plugins_router.py`:
 
@@ -2651,12 +2651,12 @@ async def app_and_token_for_yardsailing():
         yield c, token
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_plugins_router.py::test_plugin_call_dispatches_internal_with_auth -v`
 Expected: FAIL — the naive dispatcher can't resolve `Depends(get_current_user)`.
 
-- [ ] **Step 3: Replace `_dispatch_internal` with a request-forwarding implementation**
+- [x] **Step 3: Replace `_dispatch_internal` with a request-forwarding implementation**
 
 Edit `backend/app/routers/plugins.py`. Replace the entire `_dispatch_internal` helper from Task 13 with an implementation that forwards to the FastAPI app itself over an in-memory ASGI transport. This sidesteps re-implementing FastAPI's dependency injection machinery.
 
@@ -2748,14 +2748,14 @@ async def call_plugin_api(
     # ... existing external proxy path unchanged ...
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd backend && pytest tests/test_plugins_router.py -v`
 Expected: PASS on both the simple dispatch test (which needs a minor tweak if the body parsing differs) AND the auth-required test.
 
 If the first test breaks because its router has no `/api/plugins/dispatch_demo` prefix, update the fixture to use the plugin's full prefix path OR adjust the test's `path` field accordingly.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/routers/plugins.py backend/tests/test_plugins_router.py
@@ -2769,7 +2769,7 @@ git commit -m "feat(proxy): dispatch internal plugin calls via ASGI sub-request"
 **Files:**
 - Test: `backend/tests/plugins/yardsailing/test_integration.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/plugins/yardsailing/test_integration.py`:
 
@@ -2846,12 +2846,12 @@ async def test_bundle_endpoint_serves_yardsailing_js(client_and_token):
     assert "SaleForm" in resp.text
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 Run: `cd backend && pytest tests/plugins/yardsailing/test_integration.py -v`
 Expected: PASS (assuming Tasks 16-24 landed correctly and the bundle exists on disk from Task 22).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/tests/plugins/yardsailing/test_integration.py
@@ -2865,19 +2865,19 @@ git commit -m "test(yardsailing): end-to-end form → proxy → DB integration"
 **Files:**
 - Delete: `C:/Users/jimsh/repos/jain-plugins/plugins/yardsailing/`
 
-- [ ] **Step 1: Verify JAIN still loads correctly without the external manifest**
+- [x] **Step 1: Verify JAIN still loads correctly without the external manifest**
 
 Run: `cd backend && pytest -x`
 Expected: PASS. (The `tests/fixtures/plugins/` fixture directory is a separate copy used only in tests and is NOT deleted.)
 
-- [ ] **Step 2: Delete the directory in the jain-plugins repo**
+- [x] **Step 2: Delete the directory in the jain-plugins repo**
 
 ```bash
 cd C:/Users/jimsh/repos/jain-plugins
 rm -rf plugins/yardsailing
 ```
 
-- [ ] **Step 3: Commit in jain-plugins**
+- [x] **Step 3: Commit in jain-plugins**
 
 ```bash
 cd C:/Users/jimsh/repos/jain-plugins
@@ -2885,13 +2885,13 @@ git add -u plugins/
 git commit -m "chore(yardsailing): remove external plugin — migrated to JAIN internal plugin"
 ```
 
-- [ ] **Step 4: In JAIN, update PLUGINS_DIR check tolerance**
+- [x] **Step 4: In JAIN, update PLUGINS_DIR check tolerance**
 
 Because `PLUGINS_DIR` defaults to `../jain-plugins/plugins`, JAIN's external loader walks this directory and finds it empty (or finds only other plugins). Confirm the external loader handles an empty directory gracefully — Task 9 already does (`if not self.plugins_dir.exists(): return` and the iteration handles empties).
 
 Run: `cd backend && uvicorn app.main:app --port 8000` briefly. Expect `[App] loaded plugins: ['yardsailing']` where `yardsailing` is now the INTERNAL one.
 
-- [ ] **Step 5: No additional JAIN commit for this task (the deletion was in a separate repo).**
+- [x] **Step 5: No additional JAIN commit for this task (the deletion was in a separate repo).**
 
 ---
 
@@ -2904,7 +2904,7 @@ Run: `cd backend && uvicorn app.main:app --port 8000` briefly. Expect `[App] loa
 - Create: `backend/app/auth/admin.py`
 - Test: `backend/tests/test_admin_dep.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_admin_dep.py`:
 
@@ -2972,12 +2972,12 @@ def test_get_current_admin_user_rejects_non_admin(normal_user):
         settings.JAIN_ADMIN_EMAILS = original
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_admin_dep.py -v`
 Expected: FAIL — module and setting don't exist.
 
-- [ ] **Step 3: Add the setting**
+- [x] **Step 3: Add the setting**
 
 Edit `backend/app/config.py`. Add inside `Settings` class:
 
@@ -2994,7 +2994,7 @@ Edit `backend/app/config.py`. Add inside `Settings` class:
         }
 ```
 
-- [ ] **Step 4: Create the admin dependency**
+- [x] **Step 4: Create the admin dependency**
 
 Create `backend/app/auth/admin.py`:
 
@@ -3017,12 +3017,12 @@ def get_current_admin_user(user: User = Depends(get_current_user)) -> User:
     return user
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd backend && pytest tests/test_admin_dep.py -v`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/config.py backend/app/auth/admin.py backend/tests/test_admin_dep.py
@@ -3037,7 +3037,7 @@ git commit -m "feat(auth): add JAIN_ADMIN_EMAILS and get_current_admin_user depe
 - Modify: `backend/app/plugins/core/loaders.py`
 - Test: `backend/tests/test_plugin_loaders.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_plugin_loaders.py`:
 
@@ -3100,12 +3100,12 @@ async def test_external_loader_reads_installed_plugins_table():
     await engine.dispose()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_plugin_loaders.py::test_external_loader_reads_installed_plugins_table -v`
 Expected: FAIL — `load_from_db` doesn't exist.
 
-- [ ] **Step 3: Implement `load_from_db`**
+- [x] **Step 3: Implement `load_from_db`**
 
 Edit `backend/app/plugins/core/loaders.py`. Append to `ExternalPluginLoader`:
 
@@ -3141,12 +3141,12 @@ Edit `backend/app/plugins/core/loaders.py`. Append to `ExternalPluginLoader`:
             registry.register(loaded)
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd backend && pytest tests/test_plugin_loaders.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/plugins/core/loaders.py backend/tests/test_plugin_loaders.py
@@ -3161,7 +3161,7 @@ git commit -m "feat(plugins): ExternalPluginLoader.load_from_db for runtime-inst
 - Modify: `backend/app/main.py`
 - Modify: `backend/app/dependencies.py`
 
-- [ ] **Step 1: Switch external loader startup path**
+- [x] **Step 1: Switch external loader startup path**
 
 The old Stage 1 code called `ExternalPluginLoader.load_all(registry)` which walked `PLUGINS_DIR`. Now that yardsailing is internal and there are no external plugins on disk, replace the filesystem walk with a DB read at lifespan-startup.
 
@@ -3198,12 +3198,12 @@ async def lifespan(app: FastAPI):
     yield
 ```
 
-- [ ] **Step 2: Run the existing tests**
+- [x] **Step 2: Run the existing tests**
 
 Run: `cd backend && pytest -x`
 Expected: PASS.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/app/dependencies.py backend/app/main.py
@@ -3219,7 +3219,7 @@ git commit -m "feat(plugins): load external plugins from installed_plugins table
 - Modify: `backend/app/main.py`
 - Test: `backend/tests/test_plugins_install.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_plugins_install.py`:
 
@@ -3373,12 +3373,12 @@ class _FakeResponse:
             )
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_plugins_install.py -v`
 Expected: FAIL — router module doesn't exist.
 
-- [ ] **Step 3: Create the install router**
+- [x] **Step 3: Create the install router**
 
 Create `backend/app/routers/plugins_admin.py`:
 
@@ -3536,7 +3536,7 @@ async def _fetch_and_cache_bundle(plugin_name: str, bundle_url: str) -> str:
     return str(bundle_file)
 ```
 
-- [ ] **Step 4: Mount the router**
+- [x] **Step 4: Mount the router**
 
 Edit `backend/app/main.py`. Add to the imports:
 
@@ -3550,12 +3550,12 @@ Add to `create_app` after the existing `include_router` calls:
     app.include_router(plugins_admin.router)
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd backend && pytest tests/test_plugins_install.py -v`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/routers/plugins_admin.py backend/app/main.py backend/tests/test_plugins_install.py
@@ -3570,7 +3570,7 @@ git commit -m "feat(plugins): POST /api/plugins/install for runtime external ins
 - Modify: `backend/app/routers/plugins_admin.py`
 - Test: `backend/tests/test_plugins_install.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `backend/tests/test_plugins_install.py`:
 
@@ -3629,12 +3629,12 @@ async def test_delete_unknown_plugin_returns_404(admin_client):
     assert resp.status_code == 404
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd backend && pytest tests/test_plugins_install.py::test_list_installed_returns_empty_initially -v`
 Expected: FAIL (endpoint missing).
 
-- [ ] **Step 3: Implement the endpoints**
+- [x] **Step 3: Implement the endpoints**
 
 Append to `backend/app/routers/plugins_admin.py`:
 
@@ -3693,12 +3693,12 @@ async def uninstall_plugin(
     registry.unregister(plugin_name)
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd backend && pytest tests/test_plugins_install.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/routers/plugins_admin.py backend/tests/test_plugins_install.py
@@ -3714,7 +3714,7 @@ git commit -m "feat(plugins): GET /installed and DELETE /{name} admin endpoints"
 - Modify: `backend/app/routers/plugins.py`
 - Test: `backend/tests/test_tool_executor.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_tool_executor.py`:
 
@@ -3757,12 +3757,12 @@ async def test_executor_uses_per_plugin_service_key(registry, httpx_mock):
         plugin.service_key = None  # type: ignore[attr-defined]
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_tool_executor.py::test_executor_uses_per_plugin_service_key -v`
 Expected: FAIL — executor still reads `settings.JAIN_SERVICE_KEY` unconditionally.
 
-- [ ] **Step 3: Update the executor header-building block**
+- [x] **Step 3: Update the executor header-building block**
 
 Edit `backend/app/engine/tool_executor.py`. Replace the header block in `execute`:
 
@@ -3776,7 +3776,7 @@ Edit `backend/app/engine/tool_executor.py`. Replace the header block in `execute
             headers["X-Jain-User-Name"] = quote(user.name, safe="")
 ```
 
-- [ ] **Step 4: Do the same in the proxy**
+- [x] **Step 4: Do the same in the proxy**
 
 Edit `backend/app/routers/plugins.py`. In `call_plugin_api`, the external-proxy branch has its own header block. Replace:
 
@@ -3795,12 +3795,12 @@ with:
 
 Update the `_log.info` call's `service_key_configured` argument accordingly.
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd backend && pytest tests/test_tool_executor.py tests/test_plugins_router.py -v`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/engine/tool_executor.py backend/app/routers/plugins.py backend/tests/test_tool_executor.py
@@ -3815,7 +3815,7 @@ git commit -m "feat(executor): use per-plugin service keys from installed_plugin
 - Modify: `backend/app/config.py`
 - Test: `backend/tests/test_config.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_config.py`:
 
@@ -3837,12 +3837,12 @@ def test_deprecation_warning_when_jain_service_key_set(caplog):
     assert any("JAIN_SERVICE_KEY" in m and "deprecated" in m.lower() for m in messages)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_config.py::test_deprecation_warning_when_jain_service_key_set -v`
 Expected: FAIL — `warn_if_service_key_set` doesn't exist.
 
-- [ ] **Step 3: Replace the existing warning with a deprecation warning**
+- [x] **Step 3: Replace the existing warning with a deprecation warning**
 
 Edit `backend/app/config.py`. Replace the bottom-of-file JAIN_SERVICE_KEY warning block with:
 
@@ -3865,12 +3865,12 @@ def warn_if_service_key_set(s: "Settings") -> None:
 warn_if_service_key_set(settings)
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd backend && pytest tests/test_config.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/config.py backend/tests/test_config.py
@@ -3885,7 +3885,7 @@ git commit -m "chore(config): deprecate JAIN_SERVICE_KEY in favor of per-plugin 
 - Create: `backend/tests/fixtures/fake_external_plugin.py`
 - Test: `backend/tests/test_external_plugin_e2e.py`
 
-- [ ] **Step 1: Write the fake external plugin**
+- [x] **Step 1: Write the fake external plugin**
 
 Create `backend/tests/fixtures/fake_external_plugin.py`:
 
@@ -3916,7 +3916,7 @@ async def fake_get_weather() -> dict:
     return {"temp_c": 22, "conditions": "sunny"}
 ```
 
-- [ ] **Step 2: Write the failing end-to-end test**
+- [x] **Step 2: Write the failing end-to-end test**
 
 Create `backend/tests/test_external_plugin_e2e.py`:
 
@@ -4029,12 +4029,12 @@ async def test_install_then_call_then_uninstall(admin_env):
     assert "fake_weather" not in names
 ```
 
-- [ ] **Step 3: Run test**
+- [x] **Step 3: Run test**
 
 Run: `cd backend && pytest tests/test_external_plugin_e2e.py -v`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/tests/fixtures/fake_external_plugin.py backend/tests/test_external_plugin_e2e.py
@@ -4048,7 +4048,7 @@ git commit -m "test(plugins): end-to-end install/call/uninstall integration"
 **Files:**
 - Test: `backend/tests/test_plugins_install.py`
 
-- [ ] **Step 1: Append failing tests**
+- [x] **Step 1: Append failing tests**
 
 Append to `backend/tests/test_plugins_install.py`:
 
@@ -4118,12 +4118,12 @@ async def test_install_rejects_tool_name_collision_with_existing(admin_client):
     assert "create_yard_sale" in resp.json()["detail"]
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 Run: `cd backend && pytest tests/test_plugins_install.py -v`
 Expected: PASS (Task 30's validation code already covers these paths).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/tests/test_plugins_install.py
@@ -4143,17 +4143,17 @@ git commit -m "test(plugins): install validation failure cases"
 - Modify: `backend/tests/test_tool_executor.py`
 - Modify: `backend/.env.example` (if it exists — verify first)
 
-- [ ] **Step 1: Verify no code references remain in production paths**
+- [x] **Step 1: Verify no code references remain in production paths**
 
 Run: `cd backend && grep -rn "JAIN_SERVICE_KEY" app tests`
 
 Expected: matches in `config.py`, `tool_executor.py`, `plugins.py`, and test files. The test files currently set the value to verify fallback behavior.
 
-- [ ] **Step 2: Remove the field from `Settings`**
+- [x] **Step 2: Remove the field from `Settings`**
 
 Edit `backend/app/config.py`. Delete the `JAIN_SERVICE_KEY` field and the `warn_if_service_key_set` function and its call.
 
-- [ ] **Step 3: Remove legacy fallback from executor**
+- [x] **Step 3: Remove legacy fallback from executor**
 
 Edit `backend/app/engine/tool_executor.py`. Change:
 
@@ -4169,7 +4169,7 @@ to:
 
 Remove the `from app.config import settings` import if nothing else uses it.
 
-- [ ] **Step 4: Same change in the proxy router**
+- [x] **Step 4: Same change in the proxy router**
 
 Edit `backend/app/routers/plugins.py`:
 
@@ -4179,7 +4179,7 @@ Edit `backend/app/routers/plugins.py`:
 
 Remove `settings.JAIN_SERVICE_KEY` references from the proxy log lines.
 
-- [ ] **Step 5: Update legacy tests**
+- [x] **Step 5: Update legacy tests**
 
 Edit `backend/tests/test_tool_executor.py`. Remove/update tests that reference `settings.JAIN_SERVICE_KEY`:
 - `test_execute_forwards_service_key_headers_when_user_present`: rewrite to set `plugin.service_key = "test-service-key-1234"` before calling and assert the same header. Remove the `settings.JAIN_SERVICE_KEY` manipulation.
@@ -4225,7 +4225,7 @@ async def test_execute_forwards_service_key_headers_when_user_present(registry, 
         plugin.service_key = None  # type: ignore[attr-defined]
 ```
 
-- [ ] **Step 6: Update `.env.example`**
+- [x] **Step 6: Update `.env.example`**
 
 Run: `cd backend && test -f .env.example && cat .env.example || echo "no .env.example"`
 
@@ -4236,12 +4236,12 @@ If it exists and contains `JAIN_SERVICE_KEY`, remove that line and add:
 JAIN_ADMIN_EMAILS=you@example.com
 ```
 
-- [ ] **Step 7: Run full suite**
+- [x] **Step 7: Run full suite**
 
 Run: `cd backend && pytest -x`
 Expected: PASS. If anything references `settings.JAIN_SERVICE_KEY`, grep again and fix.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add backend/app/config.py backend/app/engine/tool_executor.py backend/app/routers/plugins.py backend/tests/test_tool_executor.py
@@ -4259,14 +4259,14 @@ git commit -m "refactor(config): remove deprecated JAIN_SERVICE_KEY"
 - Create: `C:/Users/jimsh/repos/jain-plugins/examples/hello-external/main.py`
 - Create: `C:/Users/jimsh/repos/jain-plugins/examples/hello-external/README.md`
 
-- [ ] **Step 1: Confirm yardsailing is gone from jain-plugins**
+- [x] **Step 1: Confirm yardsailing is gone from jain-plugins**
 
 ```bash
 cd C:/Users/jimsh/repos/jain-plugins && test ! -d plugins/yardsailing && echo "gone" || echo "still present"
 ```
 Expected: `gone`. If still present, revisit Task 26.
 
-- [ ] **Step 2: Create the hello-external reference plugin**
+- [x] **Step 2: Create the hello-external reference plugin**
 
 Create `C:/Users/jimsh/repos/jain-plugins/examples/hello-external/plugin.json`:
 
@@ -4368,7 +4368,7 @@ JAIN forwards `X-Jain-Service-Key` with every call. Check it. JAIN forwards
 authenticated user — you trust these because you trust the service key.
 ```
 
-- [ ] **Step 3: Commit in jain-plugins**
+- [x] **Step 3: Commit in jain-plugins**
 
 ```bash
 cd C:/Users/jimsh/repos/jain-plugins
@@ -4383,7 +4383,7 @@ git commit -m "docs(examples): add hello-external reference plugin"
 **Files:**
 - Modify/Create: `C:/Users/jimsh/repos/jain-plugins/README.md`
 
-- [ ] **Step 1: Write the README**
+- [x] **Step 1: Write the README**
 
 Overwrite `C:/Users/jimsh/repos/jain-plugins/README.md`:
 
@@ -4523,7 +4523,7 @@ curl -X DELETE https://jain.example.com/api/plugins/weather \
 - JAIN repo `backend/app/plugins/yardsailing/` — a full internal plugin for comparison.
 ```
 
-- [ ] **Step 2: Commit in jain-plugins**
+- [x] **Step 2: Commit in jain-plugins**
 
 ```bash
 cd C:/Users/jimsh/repos/jain-plugins
@@ -4538,7 +4538,7 @@ git commit -m "docs(readme): plugin authoring guide for phase 3"
 **Files:**
 - Modify: `mobile/App.tsx`
 
-- [ ] **Step 1: Add `AppState` + `useFocusEffect` refresh**
+- [x] **Step 1: Add `AppState` + `useFocusEffect` refresh**
 
 Edit `mobile/App.tsx`. Replace `useHydratePlugins` with:
 
@@ -4595,12 +4595,12 @@ useFocusEffect(
 );
 ```
 
-- [ ] **Step 2: Manually verify no regressions**
+- [x] **Step 2: Manually verify no regressions**
 
 Run: `cd mobile && npm run typecheck 2>&1 | head -50`
 Expected: no new type errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add mobile/App.tsx mobile/src/screens/ChatScreen.tsx
@@ -4614,11 +4614,11 @@ git commit -m "feat(mobile): refresh plugin list on foreground and tab focus"
 **Files:**
 - Modify: `C:/Users/jimsh/repos/jain/README.md` (if exists — else create)
 
-- [ ] **Step 1: Check if README exists**
+- [x] **Step 1: Check if README exists**
 
 Run: `ls C:/Users/jimsh/repos/jain/README.md 2>&1`
 
-- [ ] **Step 2: Add a "Plugin system" section**
+- [x] **Step 2: Add a "Plugin system" section**
 
 If the README exists, append this section. If not, create a minimal one:
 
@@ -4654,7 +4654,7 @@ curl -X POST http://localhost:8000/api/plugins/install \
 Configure admins via `JAIN_ADMIN_EMAILS=you@example.com` in `backend/.env`.
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md
@@ -4668,7 +4668,7 @@ git commit -m "docs(readme): phase 3 plugin system documentation"
 **Files:**
 - None (manual GitHub step)
 
-- [ ] **Step 1: Add a final redirect commit to the yardsailing repo**
+- [x] **Step 1: Add a final redirect commit to the yardsailing repo**
 
 ```bash
 cd C:/Users/jimsh/repos/yardsailing
@@ -4690,7 +4690,7 @@ Historical commits on this repo remain for reference. No new changes will
 land here.
 ```
 
-- [ ] **Step 2: Commit and push**
+- [x] **Step 2: Commit and push**
 
 ```bash
 git add README.md
@@ -4698,7 +4698,7 @@ git commit -m "docs: archive — yardsailing moved into JAIN as internal plugin"
 git push
 ```
 
-- [ ] **Step 3: Manual GitHub step (noted for the human)**
+- [x] **Step 3: Manual GitHub step (noted for the human)**
 
 - Go to https://github.com/<you>/yardsailing/settings
 - Scroll to "Archive this repository"
@@ -4707,7 +4707,7 @@ git push
 
 This step cannot be automated from the plan and must be done by the human in a browser.
 
-- [ ] **Step 4: No JAIN commit for this task.**
+- [x] **Step 4: No JAIN commit for this task.**
 
 ---
 
@@ -4716,12 +4716,12 @@ This step cannot be automated from the plan and must be done by the human in a b
 **Files:**
 - None.
 
-- [ ] **Step 1: Backend suite**
+- [x] **Step 1: Backend suite**
 
 Run: `cd backend && pytest -v`
 Expected: ALL tests pass. Zero skipped. Zero warnings aside from the one deprecation we intentionally still log.
 
-- [ ] **Step 2: Start backend and sanity-check endpoints**
+- [x] **Step 2: Start backend and sanity-check endpoints**
 
 Run: `cd backend && uvicorn app.main:app --port 8000 &`
 
@@ -4732,19 +4732,19 @@ curl -s http://localhost:8000/api/plugins | head -200
 
 Expected: health ok; `/api/plugins` lists at least `yardsailing` as `type: internal`. Kill the server.
 
-- [ ] **Step 3: Mobile typecheck**
+- [x] **Step 3: Mobile typecheck**
 
 Run: `cd mobile && npm run typecheck`
 Expected: no errors.
 
-- [ ] **Step 4: Grep for stale references**
+- [x] **Step 4: Grep for stale references**
 
 ```bash
 cd backend && grep -rn "JAIN_SERVICE_KEY\|api.yardsailing.sale" app 2>&1 || echo "clean"
 ```
 Expected: `clean` or only comments/tests referencing the old state.
 
-- [ ] **Step 5: No commit — verification only. If all four steps pass, Phase 3 is done.**
+- [x] **Step 5: No commit — verification only. If all four steps pass, Phase 3 is done.**
 
 ---
 

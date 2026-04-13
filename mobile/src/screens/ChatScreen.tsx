@@ -56,6 +56,17 @@ export function ChatScreen() {
     }, [setPlugins]),
   );
 
+  // Auto-send a prompt queued by the Help screen's example chips.
+  useFocusEffect(
+    useCallback(() => {
+      const pending = useAppStore.getState().pendingPrompt;
+      if (!pending) return;
+      useAppStore.getState().setPendingPrompt(null);
+      void send(pending);
+      listRef.current?.scrollToEnd({ animated: true });
+    }, [send]),
+  );
+
   const onSend = async () => {
     const text = input.trim();
     if (!text) return;

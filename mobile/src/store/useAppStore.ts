@@ -36,6 +36,12 @@ interface AppState {
   activeChoices: string[] | null;
   setActiveChoices: (choices: string[] | null) => void;
   clearActiveChoices: () => void;
+
+  // Prompt to auto-send on the next ChatScreen focus. Used by the Help
+  // tab's example chips: tap chip → set pendingPrompt → jump to Jain tab
+  // → ChatScreen focus effect sends it and clears it.
+  pendingPrompt: string | null;
+  setPendingPrompt: (prompt: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -82,4 +88,7 @@ export const useAppStore = create<AppState>((set) => ({
   activeChoices: null,
   setActiveChoices: (choices) => set({ activeChoices: choices }),
   clearActiveChoices: () => set({ activeChoices: null }),
+
+  pendingPrompt: null,
+  setPendingPrompt: (pendingPrompt) => set({ pendingPrompt }),
 }));

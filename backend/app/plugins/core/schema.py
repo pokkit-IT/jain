@@ -52,6 +52,11 @@ class PluginApi(BaseModel):
     base_url: str
 
 
+class HelpExample(BaseModel):
+    prompt: str  # tappable text sent to chat when the user picks it
+    description: str = ""  # optional one-liner explaining what it does
+
+
 class PluginManifest(BaseModel):
     name: str
     version: str
@@ -62,3 +67,4 @@ class PluginManifest(BaseModel):
     components: PluginComponents | None = None
     api: PluginApi | None = None
     assets: list[str] = Field(default_factory=list)
+    examples: list[HelpExample] = Field(default_factory=list)

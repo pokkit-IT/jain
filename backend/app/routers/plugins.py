@@ -29,6 +29,53 @@ async def list_plugins(registry: PluginRegistry = Depends(get_registry)) -> Plug
     return PluginListResponse(plugins=registry.list_plugins())
 
 
+class PluginHelp(BaseModel):
+    name: str
+    version: str
+    description: str
+    help_markdown: str  # empty string if no help.md exists
+    examples: list[dict]  # [{prompt, description}]
+
+
+class PluginHelpResponse(BaseModel):
+    plugins: list[PluginHelp]
+
+
+@router.get("/help", response_model=PluginHelpResponse)
+async def get_plugin_help(
+    registry: PluginRegistry = Depends(get_registry),
+) -> PluginHelpResponse:
+    """Help content for every loaded plugin.
+
+    - `help_markdown` is read from `help.md` in the plugin's directory if
+      present. For internal plugins that's the package dir; for external
+      plugins it's the install cache dir (which may or may not have one).
+    - `examples` comes from the manifest's optional `examples` field —
+      short tappable prompts the Help screen shows as chips.
+    """
+    out: list[PluginHelp] = []
+    for plugin in registry.list_plugins():
+        loaded = registry.get_plugin(plugin.name)
+        md = ""
+        if loaded is not None:
+            help_path = loaded.plugin_dir / "help.md"
+            if help_path.exists():
+                try:
+                    md = help_path.read_text(encoding="utf-8")
+                except OSError:
+                    md = ""
+        out.append(
+            PluginHelp(
+                name=plugin.name,
+                version=plugin.version,
+                description=plugin.description,
+                help_markdown=md,
+                examples=[e.model_dump() for e in plugin.examples],
+            )
+        )
+    return PluginHelpResponse(plugins=out)
+
+
 @router.get("/{plugin_name}/bundle", response_class=PlainTextResponse)
 async def get_plugin_bundle(
     plugin_name: str,

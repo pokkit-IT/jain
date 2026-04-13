@@ -92,6 +92,20 @@ async def test_recent_sales_is_public_and_returns_pins(app_and_token):
     assert rows[0]["lng"] == -74.0
 
 
+async def test_plugin_help_includes_yardsailing(app_and_token):
+    client, _ = app_and_token
+    resp = await client.get("/api/plugins/help")
+    assert resp.status_code == 200
+    plugins = resp.json()["plugins"]
+    ys = next((p for p in plugins if p["name"] == "yardsailing"), None)
+    assert ys is not None
+    # help.md should be loaded
+    assert "Yardsailing" in ys["help_markdown"]
+    # examples from plugin.json should be surfaced
+    assert len(ys["examples"]) >= 1
+    assert "prompt" in ys["examples"][0]
+
+
 async def test_delete_sale_removes_row(app_and_token):
     client, token = app_and_token
     created = await client.post(

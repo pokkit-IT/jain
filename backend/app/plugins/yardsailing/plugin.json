@@ -20,5 +20,23 @@
   "components": {
     "bundle": "bundle/yardsailing.js",
     "exports": ["SaleForm"]
-  }
+  },
+  "examples": [
+    {
+      "prompt": "Show me yard sales near me",
+      "description": "Lists upcoming sales within 25 miles"
+    },
+    {
+      "prompt": "Find yard sales within 5 miles",
+      "description": "Narrow the search radius"
+    },
+    {
+      "prompt": "I want to create a yard sale",
+      "description": "Opens the sale creation form"
+    },
+    {
+      "prompt": "What yard sales are happening this weekend?",
+      "description": "Filters by date"
+    }
+  ]
 }

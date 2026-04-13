@@ -1,10 +1,18 @@
+import asyncio
+import logging
 from typing import Any
 
-from anthropic import AsyncAnthropic
+from anthropic import APIStatusError, AsyncAnthropic
 
 from app.plugins.core.schema import ToolDef
 
 from .base import ChatMessage, LLMProvider, LLMResponse, ToolCall
+
+logger = logging.getLogger(__name__)
+
+_RETRYABLE_STATUS = {429, 529, 503, 502, 504}
+_MAX_ATTEMPTS = 4
+_BASE_DELAY = 1.0
 
 
 class AnthropicProvider(LLMProvider):
@@ -37,7 +45,7 @@ class AnthropicProvider(LLMProvider):
         if api_tools:
             kwargs["tools"] = api_tools
 
-        response = await self._client.messages.create(**kwargs)
+        response = await self._create_with_retry(kwargs)
 
         text_parts: list[str] = []
         tool_calls: list[ToolCall] = []
@@ -50,6 +58,24 @@ class AnthropicProvider(LLMProvider):
                 )
 
         return LLMResponse(text="".join(text_parts), tool_calls=tool_calls)
+
+    async def _create_with_retry(self, kwargs: dict[str, Any]) -> Any:
+        last_exc: Exception | None = None
+        for attempt in range(_MAX_ATTEMPTS):
+            try:
+                return await self._client.messages.create(**kwargs)
+            except APIStatusError as exc:
+                if exc.status_code not in _RETRYABLE_STATUS or attempt == _MAX_ATTEMPTS - 1:
+                    raise
+                delay = _BASE_DELAY * (2 ** attempt)
+                logger.warning(
+                    "Anthropic %s; retrying in %.1fs (attempt %d/%d)",
+                    exc.status_code, delay, attempt + 1, _MAX_ATTEMPTS,
+                )
+                last_exc = exc
+                await asyncio.sleep(delay)
+        assert last_exc is not None
+        raise last_exc
 
     def _convert_tool(self, tool: ToolDef) -> dict[str, Any]:
         return {

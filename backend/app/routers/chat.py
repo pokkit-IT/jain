@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from anthropic import APIStatusError
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.optional_user import get_current_user_optional
@@ -30,7 +31,15 @@ async def chat(
     )
     messages.append(ChatMessage(role="user", content=user_content))
 
-    reply = await service.send(conversation=messages, user=user, db=db)
+    try:
+        reply = await service.send(conversation=messages, user=user, db=db)
+    except APIStatusError as exc:
+        if exc.status_code in (429, 502, 503, 504, 529):
+            raise HTTPException(
+                status_code=503,
+                detail="The model is overloaded right now. Please try again in a moment.",
+            ) from exc
+        raise
     return ChatResponse(
         reply=reply.text,
         data=reply.data,

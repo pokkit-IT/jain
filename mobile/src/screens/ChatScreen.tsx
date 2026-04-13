@@ -58,7 +58,9 @@ export function ChatScreen() {
 
   const onSend = async () => {
     const text = input.trim();
+    if (!text) return;
     setInput("");
+    inputRef.current?.clear();
     await send(text);
     listRef.current?.scrollToEnd({ animated: true });
     // Refocus the input so the user can keep typing without tapping back.
@@ -68,6 +70,7 @@ export function ChatScreen() {
   const onChoice = useCallback(
     (label: string) => {
       setInput("");
+      inputRef.current?.clear();
       send(label);
       listRef.current?.scrollToEnd({ animated: true });
     },

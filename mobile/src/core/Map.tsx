@@ -21,15 +21,17 @@ export function Map({ region, sales, onPinPress }: MapProps) {
 
   return (
     <MapView style={styles.container} initialRegion={region}>
-      {sales.map((sale) => (
-        <Marker
-          key={sale.id}
-          coordinate={{ latitude: sale.lat, longitude: sale.lng }}
-          title={sale.title}
-          description={sale.address}
-          onPress={() => onPinPress?.(sale)}
-        />
-      ))}
+      {sales
+        .filter((s): s is Sale & { lat: number; lng: number } => s.lat != null && s.lng != null)
+        .map((sale) => (
+          <Marker
+            key={sale.id}
+            coordinate={{ latitude: sale.lat, longitude: sale.lng }}
+            title={sale.title}
+            description={sale.address}
+            onPress={() => onPinPress?.(sale)}
+          />
+        ))}
     </MapView>
   );
 }

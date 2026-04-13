@@ -56,6 +56,42 @@ async def test_post_sales_creates_row(app_and_token):
     assert "id" in body
 
 
+async def test_post_sales_returns_geocoded_coords(app_and_token):
+    client, token = app_and_token
+    resp = await client.post(
+        "/api/plugins/yardsailing/sales",
+        json={
+            "title": "Pinned", "address": "123 Main",
+            "start_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00",
+            "description": None, "end_date": None,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    body = resp.json()
+    # The conftest autouse stub returns (40.0, -74.0).
+    assert body["lat"] == 40.0
+    assert body["lng"] == -74.0
+
+
+async def test_recent_sales_is_public_and_returns_pins(app_and_token):
+    client, token = app_and_token
+    await client.post(
+        "/api/plugins/yardsailing/sales",
+        json={
+            "title": "Public Pin", "address": "a",
+            "start_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00",
+            "description": None, "end_date": None,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    resp = await client.get("/api/plugins/yardsailing/sales/recent")
+    assert resp.status_code == 200
+    rows = resp.json()
+    assert len(rows) == 1
+    assert rows[0]["lat"] == 40.0
+    assert rows[0]["lng"] == -74.0
+
+
 async def test_get_my_sales_lists_own_rows(app_and_token):
     client, token = app_and_token
     await client.post(

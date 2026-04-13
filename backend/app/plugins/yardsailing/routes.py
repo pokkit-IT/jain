@@ -10,6 +10,7 @@ from .services import (
     CreateSaleInput,
     create_sale,
     get_sale_by_id,
+    list_recent_sales,
     list_sales_for_owner,
 )
 
@@ -36,6 +37,8 @@ class SaleResponse(BaseModel):
     end_date: str | None
     start_time: str
     end_time: str
+    lat: float | None
+    lng: float | None
 
     @classmethod
     def from_model(cls, sale) -> "SaleResponse":
@@ -48,6 +51,8 @@ class SaleResponse(BaseModel):
             end_date=sale.end_date,
             start_time=sale.start_time,
             end_time=sale.end_time,
+            lat=sale.lat,
+            lng=sale.lng,
         )
 
 
@@ -78,6 +83,15 @@ async def list_my_sales_route(
     db: AsyncSession = Depends(get_db),
 ) -> list[SaleResponse]:
     sales = await list_sales_for_owner(db, user)
+    return [SaleResponse.from_model(s) for s in sales]
+
+
+@router.get("/sales/recent", response_model=list[SaleResponse])
+async def list_recent_sales_route(
+    db: AsyncSession = Depends(get_db),
+) -> list[SaleResponse]:
+    """Public: all recent sales across users, for the map."""
+    sales = await list_recent_sales(db, limit=100)
     return [SaleResponse.from_model(s) for s in sales]
 
 

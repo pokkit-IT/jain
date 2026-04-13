@@ -28,6 +28,8 @@ async def find_yard_sales_handler(args, user=None, db=None):
                 "end_date": s.end_date,
                 "start_time": s.start_time,
                 "end_time": s.end_time,
+                "lat": s.lat,
+                "lng": s.lng,
             }
             for s in sales
         ],

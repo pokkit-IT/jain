@@ -31,12 +31,12 @@ export interface LocationState {
 }
 
 export interface Sale {
-  id: number;
+  id: string;
   title: string;
   address: string;
-  lat: number;
-  lng: number;
-  description?: string;
+  lat: number | null;
+  lng: number | null;
+  description?: string | null;
 }
 
 export interface JainUser {

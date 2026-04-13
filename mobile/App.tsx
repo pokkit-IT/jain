@@ -12,6 +12,7 @@ import { clearToken, getToken } from "./src/auth/tokenStorage";
 import { useAppStore } from "./src/store/useAppStore";
 import { ChatScreen } from "./src/screens/ChatScreen";
 import { MapScreen } from "./src/screens/MapScreen";
+import { MySalesScreen } from "./src/screens/MySalesScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 
 const Tab = createBottomTabNavigator();
@@ -81,6 +82,7 @@ export default function App() {
         >
           <Tab.Screen name="Jain" component={ChatScreen} />
           <Tab.Screen name="Map" component={MapScreen} />
+          <Tab.Screen name="My Sales" component={MySalesScreen} />
           <Tab.Screen name="Settings" component={SettingsScreen} />
         </Tab.Navigator>
       </NavigationContainer>

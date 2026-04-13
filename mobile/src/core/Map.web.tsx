@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, View, ScrollView } from "react-native";
+import { Pressable, StyleSheet, Text, View, ScrollView } from "react-native";
 
 import { Sale } from "../types";
 
@@ -13,7 +13,7 @@ export interface MapProps {
   onPinPress?: (sale: Sale) => void;
 }
 
-export function Map({ region, sales }: MapProps) {
+export function Map({ region, sales, onPinPress }: MapProps) {
   return (
     <View style={styles.container}>
       <View style={styles.banner}>
@@ -31,11 +31,15 @@ export function Map({ region, sales }: MapProps) {
           <Text style={styles.empty}>No sales loaded yet. Ask Jain to find some.</Text>
         ) : (
           sales.map((sale) => (
-            <View key={sale.id} style={styles.item}>
+            <Pressable
+              key={sale.id}
+              style={styles.item}
+              onPress={() => onPinPress?.(sale)}
+            >
               <Text style={styles.title}>{sale.title}</Text>
               <Text style={styles.address}>{sale.address}</Text>
               {sale.description ? <Text style={styles.desc}>{sale.description}</Text> : null}
-            </View>
+            </Pressable>
           ))
         )}
       </ScrollView>

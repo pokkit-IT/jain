@@ -9,9 +9,11 @@ from app.models.user import User
 from .services import (
     CreateSaleInput,
     create_sale,
+    delete_sale,
     get_sale_by_id,
     list_recent_sales,
     list_sales_for_owner,
+    update_sale,
 )
 
 
@@ -104,3 +106,44 @@ async def get_sale_route(
     if sale is None:
         raise HTTPException(status_code=404, detail="sale not found")
     return SaleResponse.from_model(sale)
+
+
+@router.put("/sales/{sale_id}", response_model=SaleResponse)
+async def update_sale_route(
+    sale_id: str,
+    body: CreateSaleBody,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SaleResponse:
+    sale = await get_sale_by_id(db, sale_id)
+    if sale is None:
+        raise HTTPException(status_code=404, detail="sale not found")
+    if sale.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="not your sale")
+    updated = await update_sale(
+        db, sale,
+        CreateSaleInput(
+            title=body.title,
+            address=body.address,
+            description=body.description,
+            start_date=body.start_date,
+            end_date=body.end_date,
+            start_time=body.start_time,
+            end_time=body.end_time,
+        ),
+    )
+    return SaleResponse.from_model(updated)
+
+
+@router.delete("/sales/{sale_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_sale_route(
+    sale_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    sale = await get_sale_by_id(db, sale_id)
+    if sale is None:
+        raise HTTPException(status_code=404, detail="sale not found")
+    if sale.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="not your sale")
+    await delete_sale(db, sale)

@@ -37,6 +37,10 @@ export interface Sale {
   lat: number | null;
   lng: number | null;
   description?: string | null;
+  start_date?: string;
+  end_date?: string | null;
+  start_time?: string;
+  end_time?: string;
 }
 
 export interface JainUser {

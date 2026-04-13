@@ -7,33 +7,60 @@
   ui_component branch.
 """
 
+import math
+
 from app.plugins.core.schema import ToolDef, ToolInputSchema
 
 from .services import CreateSaleInput, create_sale, list_recent_sales
 
 
+_EARTH_RADIUS_MI = 3958.7613
+
+
+def _haversine_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * _EARTH_RADIUS_MI * math.asin(math.sqrt(a))
+
+
 async def find_yard_sales_handler(args, user=None, db=None):
-    """Search for yard sales. Currently returns all recent sales (no geo
-    filtering — SQLite has no spatial support). A future phase can add
-    lat/lng to the Sale model and filter by distance."""
-    sales = await list_recent_sales(db, limit=50)
-    return {
-        "sales": [
-            {
-                "id": s.id,
-                "title": s.title,
-                "address": s.address,
-                "description": s.description,
-                "start_date": s.start_date,
-                "end_date": s.end_date,
-                "start_time": s.start_time,
-                "end_time": s.end_time,
-                "lat": s.lat,
-                "lng": s.lng,
-            }
-            for s in sales
-        ],
-    }
+    """Search for yard sales. If `lat`, `lng`, and `radius_miles` are given,
+    filters to geocoded sales within that radius and sorts by distance."""
+    sales = await list_recent_sales(db, limit=100)
+
+    lat = args.get("lat")
+    lng = args.get("lng")
+    radius = args.get("radius_miles")
+
+    items = []
+    for s in sales:
+        item = {
+            "id": s.id,
+            "title": s.title,
+            "address": s.address,
+            "description": s.description,
+            "start_date": s.start_date,
+            "end_date": s.end_date,
+            "start_time": s.start_time,
+            "end_time": s.end_time,
+            "lat": s.lat,
+            "lng": s.lng,
+        }
+        if lat is not None and lng is not None and s.lat is not None and s.lng is not None:
+            d = _haversine_miles(float(lat), float(lng), s.lat, s.lng)
+            item["distance_miles"] = round(d, 2)
+        items.append(item)
+
+    if lat is not None and lng is not None and radius is not None:
+        items = [
+            i for i in items
+            if i.get("distance_miles") is not None and i["distance_miles"] <= float(radius)
+        ]
+        items.sort(key=lambda i: i["distance_miles"])
+
+    return {"sales": items}
 
 
 async def create_yard_sale_handler(args, user=None, db=None):
@@ -67,9 +94,17 @@ TOOLS: list[ToolDef] = [
         ),
         input_schema=ToolInputSchema(
             properties={
-                "query": {
-                    "type": "string",
-                    "description": "Optional search term to filter by (not yet implemented — returns all)",
+                "lat": {
+                    "type": "number",
+                    "description": "User's latitude. Pass the value from [user location: ...] in the message.",
+                },
+                "lng": {
+                    "type": "number",
+                    "description": "User's longitude. Pass the value from [user location: ...] in the message.",
+                },
+                "radius_miles": {
+                    "type": "number",
+                    "description": "Search radius in miles. Default 25 if the user doesn't specify.",
                 },
             },
             required=[],

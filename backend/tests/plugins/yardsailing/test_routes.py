@@ -92,6 +92,60 @@ async def test_recent_sales_is_public_and_returns_pins(app_and_token):
     assert rows[0]["lng"] == -74.0
 
 
+async def test_delete_sale_removes_row(app_and_token):
+    client, token = app_and_token
+    created = await client.post(
+        "/api/plugins/yardsailing/sales",
+        json={
+            "title": "Gone", "address": "a",
+            "start_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00",
+            "description": None, "end_date": None,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    sale_id = created.json()["id"]
+
+    resp = await client.delete(
+        f"/api/plugins/yardsailing/sales/{sale_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 204
+
+    missing = await client.get(f"/api/plugins/yardsailing/sales/{sale_id}")
+    assert missing.status_code == 404
+
+
+async def test_update_sale_changes_fields_and_regeocodes(app_and_token):
+    client, token = app_and_token
+    created = await client.post(
+        "/api/plugins/yardsailing/sales",
+        json={
+            "title": "Old Title", "address": "old addr",
+            "start_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00",
+            "description": None, "end_date": None,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    sale_id = created.json()["id"]
+
+    resp = await client.put(
+        f"/api/plugins/yardsailing/sales/{sale_id}",
+        json={
+            "title": "New Title", "address": "new addr",
+            "start_date": "2026-04-19", "start_time": "09:00", "end_time": "15:00",
+            "description": "updated", "end_date": None,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["title"] == "New Title"
+    assert body["address"] == "new addr"
+    # Stubbed geocode returns (40.0, -74.0)
+    assert body["lat"] == 40.0
+    assert body["lng"] == -74.0
+
+
 async def test_get_my_sales_lists_own_rows(app_and_token):
     client, token = app_and_token
     await client.post(

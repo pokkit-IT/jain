@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -51,12 +52,45 @@ async def list_sales_for_owner(db: AsyncSession, user: User) -> list[Sale]:
 
 
 async def list_recent_sales(db: AsyncSession, limit: int = 50) -> list[Sale]:
-    """All sales, most recent first. No geo filtering yet — returns everything."""
+    """All upcoming/in-progress sales, most recent first.
+
+    Excludes sales whose end_date (or start_date, if no end_date) is in the
+    past, so the map doesn't fill with stale pins.
+    """
+    today = date.today().isoformat()
+    effective_end = func.coalesce(Sale.end_date, Sale.start_date)
     result = await db.execute(
-        select(Sale).order_by(Sale.created_at.desc()).limit(limit),
+        select(Sale)
+        .where(effective_end >= today)
+        .order_by(Sale.created_at.desc())
+        .limit(limit),
     )
     return list(result.scalars().all())
 
 
 async def get_sale_by_id(db: AsyncSession, sale_id: str) -> Sale | None:
     return await db.get(Sale, sale_id)
+
+
+async def update_sale(
+    db: AsyncSession, sale: Sale, data: CreateSaleInput,
+) -> Sale:
+    """Apply edits and re-geocode if the address changed."""
+    if data.address != sale.address:
+        coords = await geocode(data.address)
+        sale.lat, sale.lng = coords if coords else (None, None)
+    sale.title = data.title
+    sale.address = data.address
+    sale.description = data.description
+    sale.start_date = data.start_date
+    sale.end_date = data.end_date
+    sale.start_time = data.start_time
+    sale.end_time = data.end_time
+    await db.commit()
+    await db.refresh(sale)
+    return sale
+
+
+async def delete_sale(db: AsyncSession, sale: Sale) -> None:
+    await db.delete(sale)
+    await db.commit()

@@ -92,6 +92,64 @@ async def test_recent_sales_is_public_and_returns_pins(app_and_token):
     assert rows[0]["lng"] == -74.0
 
 
+async def test_tags_are_stored_and_returned(app_and_token):
+    client, token = app_and_token
+    resp = await client.post(
+        "/api/plugins/yardsailing/sales",
+        json={
+            "title": "Kids Stuff", "address": "a",
+            "start_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00",
+            "description": None, "end_date": None,
+            "tags": ["Toys", "Baby Items", "toys"],  # dupe should collapse
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    body = resp.json()
+    assert set(body["tags"]) == {"toys", "baby items"}
+
+
+async def test_recent_sales_filters_by_tag(app_and_token):
+    client, token = app_and_token
+    for title, tags in [("A", ["Tools"]), ("B", ["Toys"]), ("C", ["Tools", "Clothing"])]:
+        await client.post(
+            "/api/plugins/yardsailing/sales",
+            json={
+                "title": title, "address": "a",
+                "start_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00",
+                "description": None, "end_date": None, "tags": tags,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    resp = await client.get("/api/plugins/yardsailing/sales/recent?tag=tools")
+    titles = {r["title"] for r in resp.json()}
+    assert titles == {"A", "C"}
+
+
+async def test_recent_sales_text_search_hits_description(app_and_token):
+    client, token = app_and_token
+    await client.post(
+        "/api/plugins/yardsailing/sales",
+        json={
+            "title": "Random", "address": "a",
+            "start_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00",
+            "description": "lots of vintage cameras", "end_date": None, "tags": [],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    resp = await client.get("/api/plugins/yardsailing/sales/recent?q=camera")
+    assert len(resp.json()) == 1
+
+
+async def test_tags_endpoint_lists_curated_vocab(app_and_token):
+    client, _ = app_and_token
+    resp = await client.get("/api/plugins/yardsailing/tags")
+    assert resp.status_code == 200
+    tags = resp.json()["tags"]
+    assert "Toys" in tags
+    assert "Baby Items" in tags
+
+
 async def test_plugin_help_includes_yardsailing(app_and_token):
     client, _ = app_and_token
     resp = await client.get("/api/plugins/help")

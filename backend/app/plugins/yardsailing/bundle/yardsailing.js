@@ -61,6 +61,21 @@
   // components/SaleForm.tsx
   var import_react = __toESM(__require("react"), 1);
   var import_react_native = __require("react-native");
+  var FALLBACK_TAGS = [
+    "Furniture",
+    "Toys",
+    "Tools",
+    "Baby Items",
+    "Clothing",
+    "Books",
+    "Electronics",
+    "Kitchen",
+    "Sports",
+    "Garden",
+    "Holiday",
+    "Art",
+    "Free"
+  ];
   var EMPTY = {
     title: "",
     description: "",
@@ -68,14 +83,28 @@
     start_date: "",
     end_date: "",
     start_time: "",
-    end_time: ""
+    end_time: "",
+    tags: []
   };
   function SaleForm({ initialData, bridge }) {
     const [data, setData] = (0, import_react.useState)(__spreadValues(__spreadValues({}, EMPTY), initialData));
     const [submitting, setSubmitting] = (0, import_react.useState)(false);
     const [error, setError] = (0, import_react.useState)(null);
     const [success, setSuccess] = (0, import_react.useState)(null);
+    const [tagVocab, setTagVocab] = (0, import_react.useState)(FALLBACK_TAGS);
+    (0, import_react.useEffect)(() => {
+      bridge.callPluginApi("/api/plugins/yardsailing/tags", "GET", null).then((res) => {
+        const tags = res == null ? void 0 : res.tags;
+        if (Array.isArray(tags) && tags.length > 0) setTagVocab(tags);
+      }).catch(() => {
+      });
+    }, [bridge]);
     const set = (key, value) => setData((d) => __spreadProps(__spreadValues({}, d), { [key]: value }));
+    const toggleTag = (tag) => {
+      setData((d) => __spreadProps(__spreadValues({}, d), {
+        tags: d.tags.includes(tag) ? d.tags.filter((t) => t !== tag) : [...d.tags, tag]
+      }));
+    };
     const submit = () => __async(this, null, function* () {
       console.log("[SaleForm] submit pressed, data =", data);
       setError(null);
@@ -165,7 +194,18 @@
         onChangeText: (v) => set("end_time", v),
         placeholder: "14:00"
       }
-    ))), /* @__PURE__ */ import_react.default.createElement(
+    ))), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Tags"), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.tagRow }, tagVocab.map((tag) => {
+      const active = data.tags.includes(tag);
+      return /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TouchableOpacity,
+        {
+          key: tag,
+          onPress: () => toggleTag(tag),
+          style: [styles.tagChip, active && styles.tagChipActive]
+        },
+        /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: [styles.tagText, active && styles.tagTextActive] }, tag)
+      );
+    })), /* @__PURE__ */ import_react.default.createElement(
       import_react_native.TouchableOpacity,
       {
         style: [styles.button, submitting && styles.buttonDisabled],
@@ -216,7 +256,21 @@
       padding: 12,
       marginBottom: 12
     },
-    successText: { color: "#065f46", fontSize: 14, fontWeight: "500" }
+    successText: { color: "#065f46", fontSize: 14, fontWeight: "500" },
+    tagRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 4 },
+    tagChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: "#cbd5e1",
+      backgroundColor: "#f8fafc",
+      marginRight: 6,
+      marginBottom: 6
+    },
+    tagChipActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
+    tagText: { fontSize: 13, color: "#334155", fontWeight: "600" },
+    tagTextActive: { color: "#fff" }
   });
 
   // components/index.ts

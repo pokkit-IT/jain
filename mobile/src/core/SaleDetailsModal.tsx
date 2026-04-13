@@ -60,6 +60,15 @@ export function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
                 {[when, hours].filter(Boolean).join(" · ")}
               </Text>
             ) : null}
+            {sale.tags && sale.tags.length > 0 ? (
+              <View style={styles.tagRow}>
+                {sale.tags.map((t) => (
+                  <View key={t} style={styles.tagChip}>
+                    <Text style={styles.tagText}>{t}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
             {sale.description ? (
               <Text style={styles.desc}>{sale.description}</Text>
             ) : null}
@@ -106,4 +115,16 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
   closeBtn: { paddingVertical: 14, alignItems: "center", marginTop: 8 },
   closeText: { color: "#64748b", fontSize: 15 },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16 },
+  tagChip: {
+    backgroundColor: "#eff6ff",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 6,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+  },
+  tagText: { fontSize: 12, color: "#1d4ed8", fontWeight: "600", textTransform: "capitalize" },
 });

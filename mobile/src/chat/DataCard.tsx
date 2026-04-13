@@ -53,6 +53,15 @@ export function DataCard({ displayHint, data }: DataCardProps) {
                   {sale.end_time ? `–${sale.end_time}` : ""}
                 </Text>
               ) : null}
+              {sale.tags && sale.tags.length > 0 ? (
+                <View style={styles.tagRow}>
+                  {sale.tags.slice(0, 4).map((t) => (
+                    <View key={t} style={styles.tagChip}>
+                      <Text style={styles.tagText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               <Text style={styles.chev}>›</Text>
             </Pressable>
           ))}
@@ -113,4 +122,16 @@ const styles = StyleSheet.create({
     color: "#cbd5e1",
     fontWeight: "300",
   },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 6 },
+  tagChip: {
+    backgroundColor: "#eff6ff",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 4,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+  },
+  tagText: { fontSize: 11, color: "#1d4ed8", fontWeight: "600", textTransform: "capitalize" },
 });

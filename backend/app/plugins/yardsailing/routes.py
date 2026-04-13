@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -15,6 +15,7 @@ from .services import (
     list_sales_for_owner,
     update_sale,
 )
+from .tags import CURATED_TAGS
 
 
 router = APIRouter(prefix="/api/plugins/yardsailing", tags=["yardsailing"])
@@ -28,6 +29,7 @@ class CreateSaleBody(BaseModel):
     end_date: str | None = None
     start_time: str
     end_time: str
+    tags: list[str] = Field(default_factory=list)
 
 
 class SaleResponse(BaseModel):
@@ -41,6 +43,7 @@ class SaleResponse(BaseModel):
     end_time: str
     lat: float | None
     lng: float | None
+    tags: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_model(cls, sale) -> "SaleResponse":
@@ -55,7 +58,18 @@ class SaleResponse(BaseModel):
             end_time=sale.end_time,
             lat=sale.lat,
             lng=sale.lng,
+            tags=sale.tags,
         )
+
+
+class TagListResponse(BaseModel):
+    tags: list[str]
+
+
+@router.get("/tags", response_model=TagListResponse)
+async def list_curated_tags_route() -> TagListResponse:
+    """Curated tag vocabulary for the SaleForm's chip picker."""
+    return TagListResponse(tags=CURATED_TAGS)
 
 
 @router.post("/sales", status_code=status.HTTP_201_CREATED, response_model=SaleResponse)
@@ -74,6 +88,7 @@ async def create_sale_route(
             end_date=body.end_date,
             start_time=body.start_time,
             end_time=body.end_time,
+            tags=body.tags,
         ),
     )
     return SaleResponse.from_model(sale)
@@ -91,9 +106,24 @@ async def list_my_sales_route(
 @router.get("/sales/recent", response_model=list[SaleResponse])
 async def list_recent_sales_route(
     db: AsyncSession = Depends(get_db),
+    tag: list[str] = Query(default_factory=list),
+    q: str | None = Query(default=None),
+    happening_now: bool = Query(default=False),
 ) -> list[SaleResponse]:
-    """Public: all recent sales across users, for the map."""
-    sales = await list_recent_sales(db, limit=100)
+    """Public: recent sales across users, for the map.
+
+    Query params:
+      - tag: one or more tag names (repeat: ?tag=toys&tag=tools)
+      - q: free-text search across title, description, and tags
+      - happening_now: only sales in progress right now
+    """
+    sales = await list_recent_sales(
+        db,
+        limit=100,
+        tags=tag or None,
+        query=q,
+        only_happening_now=happening_now,
+    )
     return [SaleResponse.from_model(s) for s in sales]
 
 
@@ -130,6 +160,7 @@ async def update_sale_route(
             end_date=body.end_date,
             start_time=body.start_time,
             end_time=body.end_time,
+            tags=body.tags,
         ),
     )
     return SaleResponse.from_model(updated)

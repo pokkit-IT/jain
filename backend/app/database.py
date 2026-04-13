@@ -45,6 +45,10 @@ async def _apply_dev_migrations(conn) -> None:
         if col not in cols:
             await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {coltype}"))
 
+    # yardsailing_sale_tags: Base.metadata.create_all already creates this when
+    # the model is imported at startup, so no explicit CREATE TABLE needed
+    # here. The block is a no-op if the table is present.
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session() as session:

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,12 @@ import {
   ScrollView,
 } from "react-native";
 
+const FALLBACK_TAGS = [
+  "Furniture", "Toys", "Tools", "Baby Items", "Clothing",
+  "Books", "Electronics", "Kitchen", "Sports", "Garden",
+  "Holiday", "Art", "Free",
+];
+
 export interface SaleFormData {
   title: string;
   description: string;
@@ -16,6 +22,7 @@ export interface SaleFormData {
   end_date: string;
   start_time: string;
   end_time: string;
+  tags: string[];
 }
 
 export interface SaleFormProps {
@@ -35,6 +42,7 @@ const EMPTY: SaleFormData = {
   end_date: "",
   start_time: "",
   end_time: "",
+  tags: [],
 };
 
 export function SaleForm({ initialData, bridge }: SaleFormProps) {
@@ -42,9 +50,31 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [tagVocab, setTagVocab] = useState<string[]>(FALLBACK_TAGS);
+
+  useEffect(() => {
+    // Pull the curated list from the server so the vocabulary stays in
+    // sync without a rebuild. Fall back to the baked-in list on failure.
+    bridge
+      .callPluginApi("/api/plugins/yardsailing/tags", "GET", null)
+      .then((res) => {
+        const tags = (res as { tags?: string[] })?.tags;
+        if (Array.isArray(tags) && tags.length > 0) setTagVocab(tags);
+      })
+      .catch(() => { /* keep fallback */ });
+  }, [bridge]);
 
   const set = <K extends keyof SaleFormData>(key: K, value: SaleFormData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
+
+  const toggleTag = (tag: string) => {
+    setData((d) => ({
+      ...d,
+      tags: d.tags.includes(tag)
+        ? d.tags.filter((t) => t !== tag)
+        : [...d.tags, tag],
+    }));
+  };
 
   const submit = async () => {
     // eslint-disable-next-line no-console
@@ -171,6 +201,24 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
         </View>
       </View>
 
+      <Text style={styles.label}>Tags</Text>
+      <View style={styles.tagRow}>
+        {tagVocab.map((tag) => {
+          const active = data.tags.includes(tag);
+          return (
+            <TouchableOpacity
+              key={tag}
+              onPress={() => toggleTag(tag)}
+              style={[styles.tagChip, active && styles.tagChipActive]}
+            >
+              <Text style={[styles.tagText, active && styles.tagTextActive]}>
+                {tag}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       <TouchableOpacity
         style={[styles.button, submitting && styles.buttonDisabled]}
         onPress={submit}
@@ -226,4 +274,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   successText: { color: "#065f46", fontSize: 14, fontWeight: "500" },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 4 },
+  tagChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    backgroundColor: "#f8fafc",
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  tagChipActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
+  tagText: { fontSize: 13, color: "#334155", fontWeight: "600" },
+  tagTextActive: { color: "#fff" },
 });

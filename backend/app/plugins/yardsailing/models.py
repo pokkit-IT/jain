@@ -39,3 +39,30 @@ class Sale(Base):
     )
 
     owner: Mapped[User] = relationship()
+    tag_rows: Mapped[list["SaleTag"]] = relationship(
+        back_populates="sale",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    @property
+    def tags(self) -> list[str]:
+        return sorted({t.tag for t in self.tag_rows})
+
+
+class SaleTag(Base):
+    """A tag applied to a Sale (e.g. "furniture", "toys", "baby items").
+
+    Stored lowercased for case-insensitive matching. (sale_id, tag) is the PK
+    so duplicate tags on a sale are impossible.
+    """
+
+    __tablename__ = "yardsailing_sale_tags"
+
+    sale_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("yardsailing_sales.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    tag: Mapped[str] = mapped_column(String(64), primary_key=True, index=True)
+
+    sale: Mapped[Sale] = relationship(back_populates="tag_rows")

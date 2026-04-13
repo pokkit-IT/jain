@@ -41,6 +41,7 @@ export interface Sale {
   end_date?: string | null;
   start_time?: string;
   end_time?: string;
+  tags?: string[];
 }
 
 export interface JainUser {

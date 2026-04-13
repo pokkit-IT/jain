@@ -26,9 +26,21 @@ def _haversine_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> floa
 
 
 async def find_yard_sales_handler(args, user=None, db=None):
-    """Search for yard sales. If `lat`, `lng`, and `radius_miles` are given,
-    filters to geocoded sales within that radius and sorts by distance."""
-    sales = await list_recent_sales(db, limit=100)
+    """Search for yard sales. Supports geo filter (lat/lng/radius_miles),
+    tag filter, free-text query, and "happening now" filter."""
+    tags = args.get("tags")
+    if isinstance(tags, str):
+        tags = [tags]
+    query = args.get("query")
+    only_happening_now = bool(args.get("only_happening_now"))
+
+    sales = await list_recent_sales(
+        db,
+        limit=100,
+        tags=tags or None,
+        query=query,
+        only_happening_now=only_happening_now,
+    )
 
     lat = args.get("lat")
     lng = args.get("lng")
@@ -47,6 +59,7 @@ async def find_yard_sales_handler(args, user=None, db=None):
             "end_time": s.end_time,
             "lat": s.lat,
             "lng": s.lng,
+            "tags": s.tags,
         }
         if lat is not None and lng is not None and s.lat is not None and s.lng is not None:
             d = _haversine_miles(float(lat), float(lng), s.lat, s.lng)
@@ -71,6 +84,9 @@ async def create_yard_sale_handler(args, user=None, db=None):
     if user is None:
         return {"error": "auth_required", "plugin": "yardsailing"}
 
+    tags_arg = args.get("tags") or []
+    if isinstance(tags_arg, str):
+        tags_arg = [tags_arg]
     data = CreateSaleInput(
         title=args["title"],
         address=args["address"],
@@ -79,6 +95,7 @@ async def create_yard_sale_handler(args, user=None, db=None):
         end_date=args.get("end_date"),
         start_time=args["start_time"],
         end_time=args["end_time"],
+        tags=list(tags_arg),
     )
     sale = await create_sale(db, user, data)
     return {"ok": True, "id": str(sale.id)}
@@ -106,6 +123,32 @@ TOOLS: list[ToolDef] = [
                     "type": "number",
                     "description": "Search radius in miles. Default 25 if the user doesn't specify.",
                 },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Filter to sales that have ANY of these tags. "
+                        "Known tags: Furniture, Toys, Tools, Baby Items, "
+                        "Clothing, Books, Electronics, Kitchen, Sports, "
+                        "Garden, Holiday, Art, Free. Match is case-"
+                        "insensitive so pass them however the user said them."
+                    ),
+                },
+                "query": {
+                    "type": "string",
+                    "description": (
+                        "Free-text search across title, description, and tags. "
+                        "Use this when the user describes what they're looking "
+                        "for in their own words rather than a known tag."
+                    ),
+                },
+                "only_happening_now": {
+                    "type": "boolean",
+                    "description": (
+                        "Set true when the user asks for sales happening right "
+                        "now / currently open."
+                    ),
+                },
             },
             required=[],
         ),
@@ -127,6 +170,16 @@ TOOLS: list[ToolDef] = [
                 "end_date": {"type": "string", "description": "YYYY-MM-DD, optional"},
                 "start_time": {"type": "string", "description": "HH:MM (24h)"},
                 "end_time": {"type": "string", "description": "HH:MM (24h)"},
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Category tags for this sale (e.g. ['Toys', 'Baby Items']). "
+                        "Pick from the curated list when possible: Furniture, Toys, "
+                        "Tools, Baby Items, Clothing, Books, Electronics, Kitchen, "
+                        "Sports, Garden, Holiday, Art, Free."
+                    ),
+                },
             },
             required=["title", "address", "start_date", "start_time", "end_time"],
         ),

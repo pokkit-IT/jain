@@ -27,16 +27,16 @@
       "description": "Lists upcoming sales within 25 miles"
     },
     {
-      "prompt": "Find yard sales within 5 miles",
-      "description": "Narrow the search radius"
+      "prompt": "Find yard sales near me with baby items",
+      "description": "Filter by tag — try toys, tools, furniture, etc."
+    },
+    {
+      "prompt": "What yard sales are happening right now?",
+      "description": "Only sales currently open"
     },
     {
       "prompt": "I want to create a yard sale",
       "description": "Opens the sale creation form"
-    },
-    {
-      "prompt": "What yard sales are happening this weekend?",
-      "description": "Filters by date"
     }
   ]
 }

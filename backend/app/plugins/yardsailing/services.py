@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,8 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 
 from .geocoding import geocode
-from .models import Sale, SaleTag
+from .models import Sale, SaleDay, SaleTag
 from .tags import normalize as _norm_tag
+
+
+@dataclass
+class DayHours:
+    day_date: str  # YYYY-MM-DD
+    start_time: str  # HH:MM
+    end_time: str  # HH:MM
 
 
 @dataclass
@@ -21,6 +28,68 @@ class CreateSaleInput:
     start_time: str
     end_time: str
     tags: list[str] = field(default_factory=list)
+    # Per-day overrides. When the sale spans multiple days and hours
+    # vary, one entry per day that differs from the default.
+    days: list[DayHours] = field(default_factory=list)
+
+
+def _dates_in_range(start_iso: str, end_iso: str | None) -> list[str]:
+    """Inclusive list of ISO dates from start to end. Returns [start] if end is None."""
+    try:
+        start = date.fromisoformat(start_iso)
+    except ValueError:
+        return [start_iso]
+    if not end_iso:
+        return [start_iso]
+    try:
+        end = date.fromisoformat(end_iso)
+    except ValueError:
+        return [start_iso]
+    if end < start:
+        return [start_iso]
+    out: list[str] = []
+    cur = start
+    while cur <= end:
+        out.append(cur.isoformat())
+        cur += timedelta(days=1)
+    return out
+
+
+def expanded_days(sale: Sale) -> list[dict]:
+    """Authoritative per-day schedule for a sale.
+
+    Returns one entry per date in [start_date, end_date], with hours
+    coming from a SaleDay row when present or the Sale's defaults
+    otherwise. Always safe to render in the UI.
+    """
+    out: list[dict] = []
+    for d in _dates_in_range(sale.start_date, sale.end_date):
+        start_t, end_t = sale.hours_for_day(d)
+        out.append({"day_date": d, "start_time": start_t, "end_time": end_t})
+    return out
+
+
+def _day_rows_from_input(
+    days: list[DayHours], default_start: str, default_end: str,
+    start_date: str, end_date: str | None,
+) -> list[SaleDay]:
+    """Materialize SaleDay rows from input, skipping entries that match
+    the defaults (no point storing an override that equals the fallback)."""
+    if not days:
+        return []
+    valid_dates = set(_dates_in_range(start_date, end_date))
+    rows: list[SaleDay] = []
+    for d in days:
+        if d.day_date not in valid_dates:
+            continue
+        if d.start_time == default_start and d.end_time == default_end:
+            continue
+        rows.append(SaleDay(
+            day_date=d.day_date,
+            start_time=d.start_time,
+            end_time=d.end_time,
+        ))
+    return rows
 
 
 def _normalize_tag_list(tags: list[str]) -> list[str]:
@@ -53,6 +122,10 @@ async def create_sale(db: AsyncSession, user: User, data: CreateSaleInput) -> Sa
     )
     for tag in _normalize_tag_list(data.tags):
         sale.tag_rows.append(SaleTag(tag=tag))
+    for row in _day_rows_from_input(
+        data.days, data.start_time, data.end_time, data.start_date, data.end_date,
+    ):
+        sale.day_rows.append(row)
     db.add(sale)
     await db.commit()
     await db.refresh(sale)
@@ -87,13 +160,12 @@ async def list_recent_sales(
 
     stmt = select(Sale).where(effective_end >= today)
 
+    # only_happening_now is applied in Python after the query so we can
+    # honor per-day SaleDay overrides. The cheap date bounds stay in SQL.
     if only_happening_now:
-        now_time = datetime.now().strftime("%H:%M")
         stmt = stmt.where(
             Sale.start_date <= today,
             effective_end >= today,
-            Sale.start_time <= now_time,
-            Sale.end_time >= now_time,
         )
 
     if tags:
@@ -119,7 +191,21 @@ async def list_recent_sales(
 
     stmt = stmt.order_by(Sale.created_at.desc()).limit(limit)
     result = await db.execute(stmt)
-    return list(result.scalars().unique().all())
+    sales = list(result.scalars().unique().all())
+
+    if only_happening_now:
+        now_time = datetime.now().strftime("%H:%M")
+        sales = [
+            s for s in sales
+            if _is_open_now(s, today, now_time)
+        ]
+
+    return sales
+
+
+def _is_open_now(sale: Sale, today: str, now_time: str) -> bool:
+    start_t, end_t = sale.hours_for_day(today)
+    return start_t <= now_time <= end_t
 
 
 async def get_sale_by_id(db: AsyncSession, sale_id: str) -> Sale | None:
@@ -145,6 +231,13 @@ async def update_sale(
     sale.tag_rows.clear()
     for tag in _normalize_tag_list(data.tags):
         sale.tag_rows.append(SaleTag(tag=tag))
+
+    # Replace per-day overrides the same way.
+    sale.day_rows.clear()
+    for row in _day_rows_from_input(
+        data.days, data.start_time, data.end_time, data.start_date, data.end_date,
+    ):
+        sale.day_rows.append(row)
 
     await db.commit()
     await db.refresh(sale)

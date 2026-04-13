@@ -44,10 +44,27 @@ class Sale(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    day_rows: Mapped[list["SaleDay"]] = relationship(
+        back_populates="sale",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="SaleDay.day_date",
+    )
 
     @property
     def tags(self) -> list[str]:
         return sorted({t.tag for t in self.tag_rows})
+
+    def hours_for_day(self, day_iso: str) -> tuple[str, str]:
+        """Return (start_time, end_time) for a given ISO date.
+
+        Honors a SaleDay override when one exists; otherwise falls back to
+        the sale's default start_time/end_time.
+        """
+        for row in self.day_rows:
+            if row.day_date == day_iso:
+                return row.start_time, row.end_time
+        return self.start_time, self.end_time
 
 
 class SaleTag(Base):
@@ -66,3 +83,24 @@ class SaleTag(Base):
     tag: Mapped[str] = mapped_column(String(64), primary_key=True, index=True)
 
     sale: Mapped[Sale] = relationship(back_populates="tag_rows")
+
+
+class SaleDay(Base):
+    """Per-day start/end time override for multi-day sales.
+
+    If a sale spans multiple days and the hours differ, a row goes here
+    for each day with non-default hours. When no row exists for a given
+    day in the range, the Sale's default start_time/end_time applies.
+    """
+
+    __tablename__ = "yardsailing_sale_days"
+
+    sale_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("yardsailing_sales.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    day_date: Mapped[str] = mapped_column(String(10), primary_key=True)  # YYYY-MM-DD
+    start_time: Mapped[str] = mapped_column(String(5), nullable=False)
+    end_time: Mapped[str] = mapped_column(String(5), nullable=False)
+
+    sale: Mapped[Sale] = relationship(back_populates="day_rows")

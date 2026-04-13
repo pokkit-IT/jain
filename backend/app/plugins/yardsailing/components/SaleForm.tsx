@@ -14,6 +14,12 @@ const FALLBACK_TAGS = [
   "Holiday", "Art", "Free",
 ];
 
+export interface DayHours {
+  day_date: string;
+  start_time: string;
+  end_time: string;
+}
+
 export interface SaleFormData {
   title: string;
   description: string;
@@ -23,6 +29,22 @@ export interface SaleFormData {
   start_time: string;
   end_time: string;
   tags: string[];
+  days: DayHours[];
+}
+
+function datesInRange(startIso: string, endIso: string): string[] {
+  if (!startIso) return [];
+  const start = new Date(startIso + "T00:00:00");
+  if (isNaN(start.getTime())) return [];
+  const end = endIso ? new Date(endIso + "T00:00:00") : start;
+  if (isNaN(end.getTime()) || end < start) return [startIso];
+  const out: string[] = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    out.push(cur.toISOString().slice(0, 10));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
 }
 
 export interface SaleFormProps {
@@ -43,6 +65,7 @@ const EMPTY: SaleFormData = {
   start_time: "",
   end_time: "",
   tags: [],
+  days: [],
 };
 
 export function SaleForm({ initialData, bridge }: SaleFormProps) {
@@ -66,6 +89,21 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
 
   const set = <K extends keyof SaleFormData>(key: K, value: SaleFormData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
+
+  const rangeDates = datesInRange(data.start_date, data.end_date);
+  const multiDay = rangeDates.length > 1;
+
+  const setDayHours = (day: string, startT: string, endT: string) => {
+    setData((d) => {
+      const others = d.days.filter((x) => x.day_date !== day);
+      // Only store an override if it differs from the defaults.
+      const isDefault = startT === d.start_time && endT === d.end_time;
+      const next = isDefault
+        ? others
+        : [...others, { day_date: day, start_time: startT, end_time: endT }];
+      return { ...d, days: next };
+    });
+  };
 
   const toggleTag = (tag: string) => {
     setData((d) => ({
@@ -182,7 +220,9 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
 
       <View style={styles.row}>
         <View style={styles.half}>
-          <Text style={styles.label}>Start Time *</Text>
+          <Text style={styles.label}>
+            {multiDay ? "Default Start Time *" : "Start Time *"}
+          </Text>
           <TextInput
             style={styles.input}
             value={data.start_time}
@@ -191,7 +231,9 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
           />
         </View>
         <View style={styles.half}>
-          <Text style={styles.label}>End Time *</Text>
+          <Text style={styles.label}>
+            {multiDay ? "Default End Time *" : "End Time *"}
+          </Text>
           <TextInput
             style={styles.input}
             value={data.end_time}
@@ -200,6 +242,38 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
           />
         </View>
       </View>
+
+      {multiDay ? (
+        <>
+          <Text style={styles.label}>Per-day hours</Text>
+          <Text style={styles.hint}>
+            Adjust any day if hours differ from the defaults above.
+          </Text>
+          {rangeDates.map((d) => {
+            const override = data.days.find((x) => x.day_date === d);
+            const st = override?.start_time ?? data.start_time;
+            const et = override?.end_time ?? data.end_time;
+            return (
+              <View key={d} style={styles.dayRow}>
+                <Text style={styles.dayDate}>{d}</Text>
+                <TextInput
+                  style={[styles.input, styles.dayInput]}
+                  value={st}
+                  onChangeText={(v) => setDayHours(d, v, et)}
+                  placeholder="08:00"
+                />
+                <Text style={styles.dayDash}>–</Text>
+                <TextInput
+                  style={[styles.input, styles.dayInput]}
+                  value={et}
+                  onChangeText={(v) => setDayHours(d, st, v)}
+                  placeholder="14:00"
+                />
+              </View>
+            );
+          })}
+        </>
+      ) : null}
 
       <Text style={styles.label}>Tags</Text>
       <View style={styles.tagRow}>
@@ -288,4 +362,19 @@ const styles = StyleSheet.create({
   tagChipActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
   tagText: { fontSize: 13, color: "#334155", fontWeight: "600" },
   tagTextActive: { color: "#fff" },
+  hint: { fontSize: 12, color: "#64748b", marginBottom: 8 },
+  dayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+    gap: 6,
+  },
+  dayDate: {
+    width: 110,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#334155",
+  },
+  dayInput: { flex: 1, paddingVertical: 6 },
+  dayDash: { color: "#94a3b8", fontSize: 14 },
 });

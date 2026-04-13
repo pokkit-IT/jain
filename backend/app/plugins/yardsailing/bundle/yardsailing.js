@@ -76,6 +76,20 @@
     "Art",
     "Free"
   ];
+  function datesInRange(startIso, endIso) {
+    if (!startIso) return [];
+    const start = /* @__PURE__ */ new Date(startIso + "T00:00:00");
+    if (isNaN(start.getTime())) return [];
+    const end = endIso ? /* @__PURE__ */ new Date(endIso + "T00:00:00") : start;
+    if (isNaN(end.getTime()) || end < start) return [startIso];
+    const out = [];
+    const cur = new Date(start);
+    while (cur <= end) {
+      out.push(cur.toISOString().slice(0, 10));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return out;
+  }
   var EMPTY = {
     title: "",
     description: "",
@@ -84,7 +98,8 @@
     end_date: "",
     start_time: "",
     end_time: "",
-    tags: []
+    tags: [],
+    days: []
   };
   function SaleForm({ initialData, bridge }) {
     const [data, setData] = (0, import_react.useState)(__spreadValues(__spreadValues({}, EMPTY), initialData));
@@ -100,6 +115,16 @@
       });
     }, [bridge]);
     const set = (key, value) => setData((d) => __spreadProps(__spreadValues({}, d), { [key]: value }));
+    const rangeDates = datesInRange(data.start_date, data.end_date);
+    const multiDay = rangeDates.length > 1;
+    const setDayHours = (day, startT, endT) => {
+      setData((d) => {
+        const others = d.days.filter((x) => x.day_date !== day);
+        const isDefault = startT === d.start_time && endT === d.end_time;
+        const next = isDefault ? others : [...others, { day_date: day, start_time: startT, end_time: endT }];
+        return __spreadProps(__spreadValues({}, d), { days: next });
+      });
+    };
     const toggleTag = (tag) => {
       setData((d) => __spreadProps(__spreadValues({}, d), {
         tags: d.tags.includes(tag) ? d.tags.filter((t) => t !== tag) : [...d.tags, tag]
@@ -178,7 +203,7 @@
         onChangeText: (v) => set("end_date", v),
         placeholder: "2026-04-11"
       }
-    ))), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.row }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Start Time *"), /* @__PURE__ */ import_react.default.createElement(
+    ))), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.row }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, multiDay ? "Default Start Time *" : "Start Time *"), /* @__PURE__ */ import_react.default.createElement(
       import_react_native.TextInput,
       {
         style: styles.input,
@@ -186,7 +211,7 @@
         onChangeText: (v) => set("start_time", v),
         placeholder: "08:00"
       }
-    )), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "End Time *"), /* @__PURE__ */ import_react.default.createElement(
+    )), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, multiDay ? "Default End Time *" : "End Time *"), /* @__PURE__ */ import_react.default.createElement(
       import_react_native.TextInput,
       {
         style: styles.input,
@@ -194,7 +219,29 @@
         onChangeText: (v) => set("end_time", v),
         placeholder: "14:00"
       }
-    ))), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Tags"), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.tagRow }, tagVocab.map((tag) => {
+    ))), multiDay ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Per-day hours"), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.hint }, "Adjust any day if hours differ from the defaults above."), rangeDates.map((d) => {
+      var _a, _b;
+      const override = data.days.find((x) => x.day_date === d);
+      const st = (_a = override == null ? void 0 : override.start_time) != null ? _a : data.start_time;
+      const et = (_b = override == null ? void 0 : override.end_time) != null ? _b : data.end_time;
+      return /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { key: d, style: styles.dayRow }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.dayDate }, d), /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TextInput,
+        {
+          style: [styles.input, styles.dayInput],
+          value: st,
+          onChangeText: (v) => setDayHours(d, v, et),
+          placeholder: "08:00"
+        }
+      ), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.dayDash }, "\u2013"), /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TextInput,
+        {
+          style: [styles.input, styles.dayInput],
+          value: et,
+          onChangeText: (v) => setDayHours(d, st, v),
+          placeholder: "14:00"
+        }
+      ));
+    })) : null, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Tags"), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.tagRow }, tagVocab.map((tag) => {
       const active = data.tags.includes(tag);
       return /* @__PURE__ */ import_react.default.createElement(
         import_react_native.TouchableOpacity,
@@ -270,7 +317,22 @@
     },
     tagChipActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
     tagText: { fontSize: 13, color: "#334155", fontWeight: "600" },
-    tagTextActive: { color: "#fff" }
+    tagTextActive: { color: "#fff" },
+    hint: { fontSize: 12, color: "#64748b", marginBottom: 8 },
+    dayRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 6,
+      gap: 6
+    },
+    dayDate: {
+      width: 110,
+      fontSize: 13,
+      fontWeight: "600",
+      color: "#334155"
+    },
+    dayInput: { flex: 1, paddingVertical: 6 },
+    dayDash: { color: "#94a3b8", fontSize: 14 }
   });
 
   // components/index.ts

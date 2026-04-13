@@ -34,12 +34,16 @@ function directionsUrl(sale: Sale): string {
 export function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
   if (!sale) return null;
 
-  const when = sale.start_date
-    ? sale.end_date && sale.end_date !== sale.start_date
-      ? `${sale.start_date} – ${sale.end_date}`
-      : sale.start_date
+  const days = sale.days ?? [];
+  const isMultiDay = days.length > 1;
+  const when = !isMultiDay
+    ? (sale.start_date
+        ? sale.end_date && sale.end_date !== sale.start_date
+          ? `${sale.start_date} – ${sale.end_date}`
+          : sale.start_date
+        : null)
     : null;
-  const hours = sale.start_time && sale.end_time
+  const hours = !isMultiDay && sale.start_time && sale.end_time
     ? `${sale.start_time} – ${sale.end_time}`
     : null;
 
@@ -59,6 +63,18 @@ export function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
               <Text style={styles.meta}>
                 {[when, hours].filter(Boolean).join(" · ")}
               </Text>
+            ) : null}
+            {isMultiDay ? (
+              <View style={styles.schedule}>
+                {days.map((d) => (
+                  <View key={d.day_date} style={styles.scheduleRow}>
+                    <Text style={styles.scheduleDate}>{d.day_date}</Text>
+                    <Text style={styles.scheduleHours}>
+                      {d.start_time} – {d.end_time}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             ) : null}
             {sale.tags && sale.tags.length > 0 ? (
               <View style={styles.tagRow}>
@@ -115,6 +131,22 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
   closeBtn: { paddingVertical: 14, alignItems: "center", marginTop: 8 },
   closeText: { color: "#64748b", fontSize: 15 },
+  schedule: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  scheduleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+  },
+  scheduleDate: { fontSize: 14, color: "#334155", fontWeight: "600" },
+  scheduleHours: { fontSize: 14, color: "#475569" },
   tagRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16 },
   tagChip: {
     backgroundColor: "#eff6ff",

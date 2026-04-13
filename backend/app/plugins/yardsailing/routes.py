@@ -8,8 +8,10 @@ from app.models.user import User
 
 from .services import (
     CreateSaleInput,
+    DayHours,
     create_sale,
     delete_sale,
+    expanded_days,
     get_sale_by_id,
     list_recent_sales,
     list_sales_for_owner,
@@ -21,6 +23,12 @@ from .tags import CURATED_TAGS
 router = APIRouter(prefix="/api/plugins/yardsailing", tags=["yardsailing"])
 
 
+class DayHoursBody(BaseModel):
+    day_date: str  # YYYY-MM-DD
+    start_time: str  # HH:MM
+    end_time: str  # HH:MM
+
+
 class CreateSaleBody(BaseModel):
     title: str
     address: str
@@ -30,6 +38,7 @@ class CreateSaleBody(BaseModel):
     start_time: str
     end_time: str
     tags: list[str] = Field(default_factory=list)
+    days: list[DayHoursBody] = Field(default_factory=list)
 
 
 class SaleResponse(BaseModel):
@@ -44,6 +53,9 @@ class SaleResponse(BaseModel):
     lat: float | None
     lng: float | None
     tags: list[str] = Field(default_factory=list)
+    # Expanded per-day schedule (one entry per date in the range).
+    # Always present; uses SaleDay overrides when set, defaults otherwise.
+    days: list[DayHoursBody] = Field(default_factory=list)
 
     @classmethod
     def from_model(cls, sale) -> "SaleResponse":
@@ -59,6 +71,7 @@ class SaleResponse(BaseModel):
             lat=sale.lat,
             lng=sale.lng,
             tags=sale.tags,
+            days=[DayHoursBody(**d) for d in expanded_days(sale)],
         )
 
 
@@ -89,6 +102,10 @@ async def create_sale_route(
             start_time=body.start_time,
             end_time=body.end_time,
             tags=body.tags,
+            days=[
+                DayHours(day_date=d.day_date, start_time=d.start_time, end_time=d.end_time)
+                for d in body.days
+            ],
         ),
     )
     return SaleResponse.from_model(sale)
@@ -161,6 +178,10 @@ async def update_sale_route(
             start_time=body.start_time,
             end_time=body.end_time,
             tags=body.tags,
+            days=[
+                DayHours(day_date=d.day_date, start_time=d.start_time, end_time=d.end_time)
+                for d in body.days
+            ],
         ),
     )
     return SaleResponse.from_model(updated)

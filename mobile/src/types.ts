@@ -30,6 +30,12 @@ export interface LocationState {
   lng: number;
 }
 
+export interface DayHours {
+  day_date: string; // YYYY-MM-DD
+  start_time: string; // HH:MM
+  end_time: string; // HH:MM
+}
+
 export interface Sale {
   id: string;
   title: string;
@@ -42,6 +48,7 @@ export interface Sale {
   start_time?: string;
   end_time?: string;
   tags?: string[];
+  days?: DayHours[];
 }
 
 export interface JainUser {

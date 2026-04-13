@@ -141,6 +141,64 @@ async def test_recent_sales_text_search_hits_description(app_and_token):
     assert len(resp.json()) == 1
 
 
+async def test_single_day_sale_returns_one_day_entry(app_and_token):
+    client, token = app_and_token
+    resp = await client.post(
+        "/api/plugins/yardsailing/sales",
+        json={
+            "title": "One Day", "address": "a",
+            "start_date": "2026-04-18", "end_date": None,
+            "start_time": "08:00", "end_time": "14:00",
+            "description": None, "tags": [],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    body = resp.json()
+    assert body["days"] == [
+        {"day_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00"},
+    ]
+
+
+async def test_multi_day_expands_with_defaults_when_no_overrides(app_and_token):
+    client, token = app_and_token
+    resp = await client.post(
+        "/api/plugins/yardsailing/sales",
+        json={
+            "title": "Three Day", "address": "a",
+            "start_date": "2026-04-18", "end_date": "2026-04-20",
+            "start_time": "08:00", "end_time": "14:00",
+            "description": None, "tags": [],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    body = resp.json()
+    dates = [d["day_date"] for d in body["days"]]
+    assert dates == ["2026-04-18", "2026-04-19", "2026-04-20"]
+    assert all(d["start_time"] == "08:00" and d["end_time"] == "14:00" for d in body["days"])
+
+
+async def test_multi_day_respects_per_day_overrides(app_and_token):
+    client, token = app_and_token
+    resp = await client.post(
+        "/api/plugins/yardsailing/sales",
+        json={
+            "title": "Varying Hours", "address": "a",
+            "start_date": "2026-04-18", "end_date": "2026-04-20",
+            "start_time": "08:00", "end_time": "14:00",
+            "description": None, "tags": [],
+            "days": [
+                {"day_date": "2026-04-19", "start_time": "10:00", "end_time": "16:00"},
+            ],
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    body = resp.json()
+    days = {d["day_date"]: (d["start_time"], d["end_time"]) for d in body["days"]}
+    assert days["2026-04-18"] == ("08:00", "14:00")
+    assert days["2026-04-19"] == ("10:00", "16:00")
+    assert days["2026-04-20"] == ("08:00", "14:00")
+
+
 async def test_tags_endpoint_lists_curated_vocab(app_and_token):
     client, _ = app_and_token
     resp = await client.get("/api/plugins/yardsailing/tags")

@@ -7,22 +7,10 @@
   ui_component branch.
 """
 
-import math
-
 from app.plugins.core.schema import ToolDef, ToolInputSchema
 
+from .routing import haversine_miles as _haversine_miles
 from .services import CreateSaleInput, create_sale, list_recent_sales
-
-
-_EARTH_RADIUS_MI = 3958.7613
-
-
-def _haversine_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp = math.radians(lat2 - lat1)
-    dl = math.radians(lng2 - lng1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * _EARTH_RADIUS_MI * math.asin(math.sqrt(a))
 
 
 async def find_yard_sales_handler(args, user=None, db=None):

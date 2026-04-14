@@ -361,3 +361,61 @@ async def test_upload_photo_endpoint_non_owner_forbidden(app_and_two_tokens, tmp
             headers={"Authorization": f"Bearer {token_b}"},
         )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_delete_photo_endpoint(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+
+    sale_id = await _create_test_sale(client, token)
+    buf = _make_jpeg_buf()
+
+    up = await client.post(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+        files={"file": ("x.jpg", buf, "image/jpeg")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert up.status_code == 200
+    photo = up.json()
+
+    orig_abs = tmp_path / photo["url"].removeprefix("/uploads/")
+    thumb_abs = tmp_path / photo["thumb_url"].removeprefix("/uploads/")
+    assert orig_abs.exists() and thumb_abs.exists()
+
+    resp = await client.delete(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos/{photo['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 204
+    assert not orig_abs.exists()
+    assert not thumb_abs.exists()
+
+
+@pytest.mark.asyncio
+async def test_delete_photo_non_owner_forbidden(app_and_two_tokens, tmp_path, monkeypatch):
+    from httpx import ASGITransport as _ASGITransport
+
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    app, token_a, token_b = app_and_two_tokens
+
+    async with AsyncClient(
+        transport=_ASGITransport(app=app), base_url="http://test"
+    ) as client_a:
+        sale_id = await _create_test_sale(client_a, token_a)
+        buf = _make_jpeg_buf()
+        up = await client_a.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("x.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token_a}"},
+        )
+        photo = up.json()
+
+    async with AsyncClient(
+        transport=_ASGITransport(app=app), base_url="http://test"
+    ) as client_b:
+        resp = await client_b.delete(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos/{photo['id']}",
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+    assert resp.status_code in (403, 404)

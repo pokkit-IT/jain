@@ -17,8 +17,8 @@ from .services import (
     list_sales_for_owner,
     update_sale,
 )
-from .models import SalePhoto
-from .photos import save_photo
+from .models import Sale, SalePhoto
+from .photos import delete_photo as _delete_photo, save_photo
 from .tags import CURATED_TAGS
 
 
@@ -228,3 +228,20 @@ async def upload_sale_photo(
 
     photo = await save_photo(db, sale_id, file)
     return _photo_to_json(photo)
+
+
+@router.delete("/sales/{sale_id}/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_sale_photo(
+    sale_id: str,
+    photo_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    sale = await db.get(Sale, sale_id)
+    if sale is None or sale.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="sale_not_found")
+    photo = await db.get(SalePhoto, photo_id)
+    if photo is None or photo.sale_id != sale_id:
+        raise HTTPException(status_code=404, detail="photo_not_found")
+    await _delete_photo(db, photo)
+    return None

@@ -181,3 +181,41 @@ async def test_delete_photo_removes_files_and_row(tmp_path, monkeypatch, session
     assert not orig.exists() and not thumb.exists()
     res = await session.execute(select(SalePhoto).where(SalePhoto.id == photo.id))
     assert res.scalar_one_or_none() is None
+
+
+@pytest.mark.asyncio
+async def test_save_photo_cleans_up_files_if_commit_fails(tmp_path, monkeypatch, session_and_user):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+
+    import io
+    from fastapi import UploadFile
+    from app.plugins.yardsailing.models import Sale
+    from app.plugins.yardsailing.photos import save_photo, sale_folder
+    import uuid
+
+    session, user = session_and_user
+    sale = Sale(
+        id=str(uuid.uuid4()), owner_id=user.id,
+        title="t", address="a", description=None,
+        start_date="2026-04-14", end_date=None,
+        start_time="08:00", end_time="12:00",
+        lat=0.0, lng=0.0,
+    )
+    session.add(sale)
+    await session.commit()
+
+    # Force commit to fail by monkeypatching session.commit AFTER the first commit above.
+    async def failing_commit():
+        raise RuntimeError("simulated commit failure")
+    monkeypatch.setattr(session, "commit", failing_commit)
+
+    file = UploadFile(filename="pic.jpg", file=io.BytesIO(_jpeg_bytes()))
+    file.headers = {"content-type": "image/jpeg"}  # type: ignore[attr-defined]
+
+    with pytest.raises(RuntimeError):
+        await save_photo(session, sale.id, file)
+
+    # Neither files should exist — both must have been cleaned up.
+    folder = sale_folder(sale.id)
+    if folder.exists():
+        assert list(folder.iterdir()) == []

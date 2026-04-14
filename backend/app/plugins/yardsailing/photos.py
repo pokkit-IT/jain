@@ -88,7 +88,12 @@ async def save_photo(db: AsyncSession, sale_id: str, upload: UploadFile) -> Sale
         created_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(photo)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        orig_abs.unlink(missing_ok=True)
+        thumb_abs.unlink(missing_ok=True)
+        raise
     await db.refresh(photo)
     return photo
 

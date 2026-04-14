@@ -1,6 +1,7 @@
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { absUrl } from "../api/client";
 import { SaleDetailsModal } from "../core/SaleDetailsModal";
 import { Sale } from "../types";
 
@@ -39,29 +40,39 @@ export function DataCard({ displayHint, data }: DataCardProps) {
               style={styles.card}
               onPress={() => setSelected(sale)}
             >
-              <View style={styles.cardRow}>
-                <Text style={styles.title} numberOfLines={1}>{sale.title}</Text>
-                {sale.distance_miles != null ? (
-                  <Text style={styles.distance}>{sale.distance_miles.toFixed(1)} mi</Text>
+              <View style={styles.cardInner}>
+                {sale.photos && sale.photos.length > 0 ? (
+                  <Image
+                    source={{ uri: absUrl(sale.photos[0].thumb_url) }}
+                    style={styles.hero}
+                  />
                 ) : null}
-              </View>
-              <Text style={styles.address} numberOfLines={1}>{sale.address}</Text>
-              {(sale.start_date || sale.start_time) ? (
-                <Text style={styles.meta} numberOfLines={1}>
-                  {sale.start_date ?? ""}
-                  {sale.start_time ? ` · ${sale.start_time}` : ""}
-                  {sale.end_time ? `–${sale.end_time}` : ""}
-                </Text>
-              ) : null}
-              {sale.tags && sale.tags.length > 0 ? (
-                <View style={styles.tagRow}>
-                  {sale.tags.slice(0, 4).map((t) => (
-                    <View key={t} style={styles.tagChip}>
-                      <Text style={styles.tagText}>{t}</Text>
+                <View style={styles.cardBody}>
+                  <View style={styles.cardRow}>
+                    <Text style={styles.title} numberOfLines={1}>{sale.title}</Text>
+                    {sale.distance_miles != null ? (
+                      <Text style={styles.distance}>{sale.distance_miles.toFixed(1)} mi</Text>
+                    ) : null}
+                  </View>
+                  <Text style={styles.address} numberOfLines={1}>{sale.address}</Text>
+                  {(sale.start_date || sale.start_time) ? (
+                    <Text style={styles.meta} numberOfLines={1}>
+                      {sale.start_date ?? ""}
+                      {sale.start_time ? ` · ${sale.start_time}` : ""}
+                      {sale.end_time ? `–${sale.end_time}` : ""}
+                    </Text>
+                  ) : null}
+                  {sale.tags && sale.tags.length > 0 ? (
+                    <View style={styles.tagRow}>
+                      {sale.tags.slice(0, 4).map((t) => (
+                        <View key={t} style={styles.tagChip}>
+                          <Text style={styles.tagText}>{t}</Text>
+                        </View>
+                      ))}
                     </View>
-                  ))}
+                  ) : null}
                 </View>
-              ) : null}
+              </View>
               <Text style={styles.chev}>›</Text>
             </Pressable>
           ))}
@@ -104,6 +115,20 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
     position: "relative",
+  },
+  cardInner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  hero: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    marginRight: 10,
+    backgroundColor: "#f1f5f9",
+  },
+  cardBody: {
+    flex: 1,
   },
   cardRow: {
     flexDirection: "row",

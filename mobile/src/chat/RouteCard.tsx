@@ -66,8 +66,8 @@ export function RouteCard({ route }: Props) {
 }
 
 function buildAppleMapsUrl(stops: RouteStop[]): string {
-  const params = stops.map((s) => `daddr=${s.lat},${s.lng}`).join("&");
-  return `http://maps.apple.com/?${params}`;
+  const chained = stops.map((s) => `${s.lat},${s.lng}`).join("+to:");
+  return `http://maps.apple.com/?daddr=${chained}`;
 }
 
 function buildGoogleMapsUrl(stops: RouteStop[]): string {

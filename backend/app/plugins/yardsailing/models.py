@@ -54,6 +54,7 @@ class Sale(Base):
         "SalePhoto",
         cascade="all, delete-orphan",
         order_by="SalePhoto.position",
+        lazy="selectin",
     )
 
     @property

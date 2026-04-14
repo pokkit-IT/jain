@@ -473,3 +473,58 @@ async def test_delete_photo_non_owner_forbidden(app_and_two_tokens, tmp_path, mo
             headers={"Authorization": f"Bearer {token_b}"},
         )
     assert resp.status_code in (403, 404)
+
+
+@pytest.mark.asyncio
+async def test_list_sales_includes_ordered_photos(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+    sale_id = await _create_test_sale(client, token)
+
+    ids: list[str] = []
+    for _ in range(3):
+        buf = _make_jpeg_buf()
+        r = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("p.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        ids.append(r.json()["id"])
+
+    resp = await client.get(
+        "/api/plugins/yardsailing/sales",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    payload = resp.json()
+    sales = payload if isinstance(payload, list) else payload.get("sales", [])
+    target = next(s for s in sales if s["id"] == sale_id)
+    assert "photos" in target
+    assert [p["id"] for p in target["photos"]] == ids
+    assert target["photos"][0]["position"] == 0
+    assert all("thumb_url" in p and "url" in p for p in target["photos"])
+
+
+@pytest.mark.asyncio
+async def test_get_sale_detail_includes_photos(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+    sale_id = await _create_test_sale(client, token)
+
+    ids: list[str] = []
+    for _ in range(2):
+        buf = _make_jpeg_buf()
+        r = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("p.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        ids.append(r.json()["id"])
+
+    resp = await client.get(f"/api/plugins/yardsailing/sales/{sale_id}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "photos" in body
+    assert [p["id"] for p in body["photos"]] == ids
+    assert body["photos"][0]["position"] == 0
+    assert all("thumb_url" in p and "url" in p for p in body["photos"])

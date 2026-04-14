@@ -44,6 +44,14 @@ class CreateSaleBody(BaseModel):
     days: list[DayHoursBody] = Field(default_factory=list)
 
 
+class SalePhotoOut(BaseModel):
+    id: str
+    position: int
+    content_type: str
+    url: str
+    thumb_url: str
+
+
 class SaleResponse(BaseModel):
     id: str
     title: str
@@ -59,9 +67,11 @@ class SaleResponse(BaseModel):
     # Expanded per-day schedule (one entry per date in the range).
     # Always present; uses SaleDay overrides when set, defaults otherwise.
     days: list[DayHoursBody] = Field(default_factory=list)
+    photos: list[SalePhotoOut] = Field(default_factory=list)
 
     @classmethod
     def from_model(cls, sale) -> "SaleResponse":
+        photos_sorted = sorted(sale.photos or [], key=lambda p: p.position)
         return cls(
             id=sale.id,
             title=sale.title,
@@ -75,6 +85,16 @@ class SaleResponse(BaseModel):
             lng=sale.lng,
             tags=sale.tags,
             days=[DayHoursBody(**d) for d in expanded_days(sale)],
+            photos=[
+                SalePhotoOut(
+                    id=p.id,
+                    position=p.position,
+                    content_type=p.content_type,
+                    url=f"/uploads/{p.original_path}",
+                    thumb_url=f"/uploads/{p.thumb_path}",
+                )
+                for p in photos_sorted
+            ],
         )
 
 

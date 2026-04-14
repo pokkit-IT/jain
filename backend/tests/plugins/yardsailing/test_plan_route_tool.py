@@ -58,7 +58,7 @@ async def test_plan_route_handler_orders_two_sales(session_and_user):
 async def test_plan_route_handler_missing_start_location(session_and_user):
     session, user = session_and_user
     result = await plan_route_handler(
-        {"sale_ids": [1]},
+        {"sale_ids": ["any"]},
         user=user,
         db=session,
     )

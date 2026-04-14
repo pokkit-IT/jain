@@ -25,14 +25,14 @@ class LatLng:
 
 @dataclass
 class RouteStop:
-    sale_id: int
+    sale_id: str
     eta_minutes: float
     in_window: bool
 
 
 @dataclass
 class ExcludedSale:
-    sale_id: int
+    sale_id: str
     reason: str
 
 
@@ -56,7 +56,7 @@ def haversine_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float
 class SaleInput:
     """Minimal sale shape needed for routing. end_datetime is the
     datetime the sale closes; None means no window check."""
-    id: int
+    id: str
     lat: float
     lng: float
     end_datetime: datetime | None = None

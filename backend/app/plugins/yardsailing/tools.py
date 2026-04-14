@@ -113,7 +113,7 @@ async def plan_route_handler(args, user=None, db=None):
         return {"error": "no_sales_found"}
 
     inputs: list[SaleInput] = []
-    sale_lookup: dict[int, Sale] = {}
+    sale_lookup: dict[str, Sale] = {}
     for s in sales:
         if s.lat is None or s.lng is None:
             continue
@@ -256,8 +256,8 @@ TOOLS: list[ToolDef] = [
             properties={
                 "sale_ids": {
                     "type": "array",
-                    "items": {"type": "integer"},
-                    "description": "Yard sale IDs to include, 1-10.",
+                    "items": {"type": "string"},
+                    "description": "Yard sale IDs (UUID strings) to include, 1-10.",
                 },
                 "start_location": {
                     "type": "object",

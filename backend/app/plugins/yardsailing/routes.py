@@ -6,6 +6,7 @@ from app.auth.dependencies import get_current_user
 from app.database import get_db
 from app.models.user import User
 
+from .routing import MAX_STOPS
 from .services import (
     CreateSaleInput,
     DayHours,
@@ -18,6 +19,7 @@ from .services import (
     update_sale,
 )
 from .tags import CURATED_TAGS
+from .tools import plan_route_handler
 
 
 router = APIRouter(prefix="/api/plugins/yardsailing", tags=["yardsailing"])
@@ -199,3 +201,36 @@ async def delete_sale_route(
     if sale.owner_id != user.id:
         raise HTTPException(status_code=403, detail="not your sale")
     await delete_sale(db, sale)
+
+
+class StartLocation(BaseModel):
+    lat: float
+    lng: float
+
+
+class PlanRouteRequest(BaseModel):
+    sale_ids: list[str]
+    start_location: StartLocation
+
+
+@router.post("/plan_route")
+async def plan_route_endpoint(
+    body: PlanRouteRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if len(body.sale_ids) > MAX_STOPS:
+        raise HTTPException(status_code=400, detail=f"max {MAX_STOPS} stops")
+    if not body.sale_ids:
+        raise HTTPException(status_code=400, detail="sale_ids required")
+    result = await plan_route_handler(
+        {
+            "sale_ids": body.sale_ids,
+            "start_location": body.start_location.model_dump(),
+        },
+        user=user,
+        db=db,
+    )
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result

@@ -36,6 +36,14 @@ export interface DayHours {
   end_time: string; // HH:MM
 }
 
+export interface SalePhoto {
+  id: string;
+  position: number;
+  content_type: string;
+  url: string;       // relative, e.g. "/uploads/sales/<id>/<uuid>.jpg"
+  thumb_url: string;
+}
+
 export interface Sale {
   id: string;
   title: string;
@@ -49,6 +57,7 @@ export interface Sale {
   end_time?: string;
   tags?: string[];
   days?: DayHours[];
+  photos?: SalePhoto[];
 }
 
 export interface JainUser {

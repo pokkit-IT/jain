@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Sale } from "../types";
+import type { Sale, SalePhoto } from "../types";
 
 export interface SaleInput {
   title: string;
@@ -48,4 +48,37 @@ export async function updateSale(id: string, data: SaleInput): Promise<Sale> {
 
 export async function deleteSale(id: string): Promise<void> {
   await apiClient.delete(`/api/plugins/yardsailing/sales/${id}`);
+}
+
+export async function uploadSalePhoto(
+  saleId: string,
+  file: { uri: string; name: string; type: string },
+): Promise<SalePhoto> {
+  const form = new FormData();
+  // React Native FormData accepts {uri, name, type} for local file uploads.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  form.append("file", file as any);
+  const { data } = await apiClient.post<SalePhoto>(
+    `/api/plugins/yardsailing/sales/${saleId}/photos`,
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return data;
+}
+
+export async function deleteSalePhoto(saleId: string, photoId: string): Promise<void> {
+  await apiClient.delete(
+    `/api/plugins/yardsailing/sales/${saleId}/photos/${photoId}`,
+  );
+}
+
+export async function reorderSalePhotos(
+  saleId: string,
+  photoIds: string[],
+): Promise<SalePhoto[]> {
+  const { data } = await apiClient.patch<SalePhoto[]>(
+    `/api/plugins/yardsailing/sales/${saleId}/photos/reorder`,
+    { photo_ids: photoIds },
+  );
+  return data;
 }

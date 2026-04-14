@@ -1,5 +1,7 @@
 import React from "react";
 import {
+  Dimensions,
+  Image,
   Linking,
   Modal,
   Platform,
@@ -10,6 +12,7 @@ import {
   View,
 } from "react-native";
 
+import { absUrl } from "../api/client";
 import type { Sale } from "../types";
 
 export interface SaleDetailsModalProps {
@@ -57,6 +60,23 @@ export function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => { /* swallow */ }}>
           <ScrollView contentContainerStyle={styles.body}>
+            {sale.photos && sale.photos.length > 0 ? (
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                style={styles.carousel}
+              >
+                {sale.photos.map((p) => (
+                  <Image
+                    key={p.id}
+                    source={{ uri: absUrl(p.url) }}
+                    style={styles.carouselImage}
+                    resizeMode="cover"
+                  />
+                ))}
+              </ScrollView>
+            ) : null}
             <Text style={styles.title}>{sale.title}</Text>
             <Text style={styles.address}>{sale.address}</Text>
             {when || hours ? (
@@ -159,4 +179,11 @@ const styles = StyleSheet.create({
     borderColor: "#bfdbfe",
   },
   tagText: { fontSize: 12, color: "#1d4ed8", fontWeight: "600", textTransform: "capitalize" },
+  carousel: { height: 240, marginBottom: 12 },
+  carouselImage: {
+    width: Dimensions.get("window").width - 24,
+    height: 240,
+    borderRadius: 12,
+    marginRight: 8,
+  },
 });

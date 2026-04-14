@@ -393,6 +393,60 @@ async def test_delete_photo_endpoint(app_and_token, tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_reorder_photos_endpoint(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+
+    sale_id = await _create_test_sale(client, token)
+
+    ids: list[str] = []
+    for _ in range(3):
+        buf = _make_jpeg_buf()
+        r = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("p.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        ids.append(r.json()["id"])
+
+    reversed_ids = list(reversed(ids))
+    resp = await client.patch(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos/reorder",
+        json={"photo_ids": reversed_ids},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert [p["id"] for p in body] == reversed_ids
+    assert [p["position"] for p in body] == [0, 1, 2]
+
+
+@pytest.mark.asyncio
+async def test_reorder_rejects_mismatched_ids(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+
+    sale_id = await _create_test_sale(client, token)
+
+    ids: list[str] = []
+    for _ in range(3):
+        buf = _make_jpeg_buf()
+        r = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("p.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        ids.append(r.json()["id"])
+
+    resp = await client.patch(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos/reorder",
+        json={"photo_ids": ids[:2]},  # missing one
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_delete_photo_non_owner_forbidden(app_and_two_tokens, tmp_path, monkeypatch):
     from httpx import ASGITransport as _ASGITransport
 

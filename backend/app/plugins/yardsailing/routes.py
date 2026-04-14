@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -245,3 +246,30 @@ async def delete_sale_photo(
         raise HTTPException(status_code=404, detail="photo_not_found")
     await _delete_photo(db, photo)
     return None
+
+
+class ReorderRequest(BaseModel):
+    photo_ids: list[str]
+
+
+@router.patch("/sales/{sale_id}/photos/reorder")
+async def reorder_sale_photos(
+    sale_id: str,
+    body: ReorderRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    sale = await db.get(Sale, sale_id)
+    if sale is None or sale.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="sale_not_found")
+
+    res = await db.execute(select(SalePhoto).where(SalePhoto.sale_id == sale_id))
+    existing = {p.id: p for p in res.scalars().all()}
+    if set(existing.keys()) != set(body.photo_ids):
+        raise HTTPException(status_code=400, detail="photo_ids_mismatch")
+
+    for index, pid in enumerate(body.photo_ids):
+        existing[pid].position = index
+    await db.commit()
+
+    return [_photo_to_json(existing[pid]) for pid in body.photo_ids]

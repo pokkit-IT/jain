@@ -1,3 +1,4 @@
+import shutil
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
@@ -9,6 +10,7 @@ from app.models.user import User
 
 from .geocoding import geocode
 from .models import Sale, SaleDay, SaleTag
+from .photos import sale_folder
 from .tags import normalize as _norm_tag
 
 
@@ -252,5 +254,7 @@ async def update_sale(
 
 
 async def delete_sale(db: AsyncSession, sale: Sale) -> None:
+    sale_id = sale.id
     await db.delete(sale)
     await db.commit()
+    shutil.rmtree(sale_folder(sale_id), ignore_errors=True)

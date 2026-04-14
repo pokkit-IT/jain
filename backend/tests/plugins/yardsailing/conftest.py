@@ -1,4 +1,31 @@
+from uuid import uuid4
+
 import pytest
+
+from app.auth.jwt import sign_access_token
+from app.database import async_session, engine
+from app.main import create_app
+from app.models.base import Base
+from app.models.user import User
+
+
+@pytest.fixture
+async def app_and_two_tokens():
+    """Two independent users against a fresh DB. Yields (app, token_a, token_b)."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with async_session() as s:
+        user_a = User(id=uuid4(), email="a@two.com", name="A", email_verified=True, google_sub="ga")
+        user_b = User(id=uuid4(), email="b@two.com", name="B", email_verified=True, google_sub="gb")
+        s.add_all([user_a, user_b])
+        await s.commit()
+        token_a = sign_access_token(user_a)
+        token_b = sign_access_token(user_b)
+
+    app = create_app()
+    yield app, token_a, token_b
 
 
 @pytest.fixture(autouse=True)

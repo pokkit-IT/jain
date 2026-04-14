@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,8 @@ from .services import (
     list_sales_for_owner,
     update_sale,
 )
+from .models import SalePhoto
+from .photos import save_photo
 from .tags import CURATED_TAGS
 
 
@@ -199,3 +201,30 @@ async def delete_sale_route(
     if sale.owner_id != user.id:
         raise HTTPException(status_code=403, detail="not your sale")
     await delete_sale(db, sale)
+
+
+def _photo_to_json(photo: SalePhoto) -> dict:
+    return {
+        "id": photo.id,
+        "position": photo.position,
+        "content_type": photo.content_type,
+        "url": f"/uploads/{photo.original_path}",
+        "thumb_url": f"/uploads/{photo.thumb_path}",
+    }
+
+
+@router.post("/sales/{sale_id}/photos")
+async def upload_sale_photo(
+    sale_id: str,
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    sale = await get_sale_by_id(db, sale_id)
+    if sale is None:
+        raise HTTPException(status_code=404, detail="sale_not_found")
+    if sale.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="not_sale_owner")
+
+    photo = await save_photo(db, sale_id, file)
+    return _photo_to_json(photo)

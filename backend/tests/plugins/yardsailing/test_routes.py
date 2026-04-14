@@ -1,13 +1,39 @@
+import io
 from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from PIL import Image
 
 from app.auth.jwt import sign_access_token
 from app.database import async_session, engine
 from app.main import create_app
 from app.models.base import Base
 from app.models.user import User
+
+
+_SALE_PAYLOAD = {
+    "title": "Photo Sale", "address": "1 Test St",
+    "start_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00",
+    "description": None, "end_date": None,
+}
+
+
+async def _create_test_sale(client: AsyncClient, token: str) -> str:
+    resp = await client.post(
+        "/api/plugins/yardsailing/sales",
+        json=_SALE_PAYLOAD,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()["id"]
+
+
+def _make_jpeg_buf() -> io.BytesIO:
+    buf = io.BytesIO()
+    Image.new("RGB", (800, 600), (100, 200, 50)).save(buf, format="JPEG")
+    buf.seek(0)
+    return buf
 
 
 @pytest.fixture
@@ -295,3 +321,43 @@ async def test_get_my_sales_lists_own_rows(app_and_token):
     rows = resp.json()
     assert len(rows) == 1
     assert rows[0]["title"] == "One"
+
+
+@pytest.mark.asyncio
+async def test_upload_photo_endpoint_happy(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+
+    sale_id = await _create_test_sale(client, token)
+
+    resp = await client.post(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+        files={"file": ("x.jpg", _make_jpeg_buf(), "image/jpeg")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["position"] == 0
+    assert body["url"].startswith("/uploads/sales/")
+    assert body["thumb_url"].startswith("/uploads/sales/")
+    assert body["content_type"] == "image/jpeg"
+
+
+@pytest.mark.asyncio
+async def test_upload_photo_endpoint_non_owner_forbidden(app_and_two_tokens, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    app, token_a, token_b = app_and_two_tokens
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # User A creates a sale
+        sale_id = await _create_test_sale(client, token_a)
+
+        # User B tries to upload to it
+        resp = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("x.jpg", _make_jpeg_buf(), "image/jpeg")},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+    assert resp.status_code == 403

@@ -54,6 +54,7 @@ class SalePhotoOut(BaseModel):
 
 class SaleResponse(BaseModel):
     id: str
+    owner_id: str
     title: str
     address: str
     description: str | None
@@ -74,6 +75,7 @@ class SaleResponse(BaseModel):
         photos_sorted = sorted(sale.photos or [], key=lambda p: p.position)
         return cls(
             id=sale.id,
+            owner_id=str(sale.owner_id),
             title=sale.title,
             address=sale.address,
             description=sale.description,

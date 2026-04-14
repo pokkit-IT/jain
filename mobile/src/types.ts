@@ -46,6 +46,7 @@ export interface SalePhoto {
 
 export interface Sale {
   id: string;
+  owner_id: string;
   title: string;
   address: string;
   lat: number | null;

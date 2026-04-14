@@ -28,10 +28,13 @@ def _infer_display_hint(plugin_name: str, tool_name: str, data: Any) -> str | No
 
     Phase 1 heuristic:
     - find_* tools returning a dict with list values -> map
+    - plan_route returning a dict with a "route" key -> route
     - create_* tools -> None (inline text reply)
     """
     if not isinstance(data, dict):
         return None
+    if plugin_name == "yardsailing" and tool_name == "plan_route" and "route" in data:
+        return "route"
     if tool_name.startswith("find_"):
         # Look for a list-valued key (sales, items, etc.)
         for value in data.values():

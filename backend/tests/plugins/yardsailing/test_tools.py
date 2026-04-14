@@ -30,7 +30,7 @@ async def session_and_user():
 
 def test_tools_list_has_all_tools():
     names = {t.name for t in TOOLS}
-    assert names == {"find_yard_sales", "create_yard_sale", "show_sale_form"}
+    assert names == {"find_yard_sales", "create_yard_sale", "show_sale_form", "plan_route"}
 
 
 def test_show_sale_form_is_ui_component():

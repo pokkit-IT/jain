@@ -82,3 +82,34 @@ export async function reorderSalePhotos(
   );
   return data;
 }
+
+export interface RouteStop {
+  sale_id: string;
+  eta_minutes: number;
+  in_window: boolean;
+  title: string;
+  address: string;
+  lat: number;
+  lng: number;
+}
+
+export interface Route {
+  stops: RouteStop[];
+  total_distance_miles: number;
+  total_duration_minutes: number;
+}
+
+export interface PlanRouteResponse {
+  route: Route;
+}
+
+export async function planRoute(
+  saleIds: string[],
+  start: { lat: number; lng: number },
+): Promise<PlanRouteResponse> {
+  const { data } = await apiClient.post<PlanRouteResponse>(
+    "/api/plugins/yardsailing/plan_route",
+    { sale_ids: saleIds, start_location: start },
+  );
+  return data;
+}

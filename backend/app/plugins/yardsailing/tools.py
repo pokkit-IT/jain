@@ -7,22 +7,13 @@
   ui_component branch.
 """
 
-import math
+from datetime import datetime, date as date_cls, time as time_cls
+from datetime import timezone
 
 from app.plugins.core.schema import ToolDef, ToolInputSchema
 
+from .routing import haversine_miles as _haversine_miles, LatLng, SaleInput, plan_route, MAX_STOPS
 from .services import CreateSaleInput, create_sale, list_recent_sales
-
-
-_EARTH_RADIUS_MI = 3958.7613
-
-
-def _haversine_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp = math.radians(lat2 - lat1)
-    dl = math.radians(lng2 - lng1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * _EARTH_RADIUS_MI * math.asin(math.sqrt(a))
 
 
 async def find_yard_sales_handler(args, user=None, db=None):
@@ -99,6 +90,64 @@ async def create_yard_sale_handler(args, user=None, db=None):
     )
     sale = await create_sale(db, user, data)
     return {"ok": True, "id": str(sale.id)}
+
+
+async def plan_route_handler(args, user=None, db=None):
+    """Plan an ordered route through selected yard sales."""
+    start_raw = args.get("start_location")
+    if not start_raw or "lat" not in start_raw or "lng" not in start_raw:
+        return {"error": "start_location_required"}
+    start = LatLng(lat=float(start_raw["lat"]), lng=float(start_raw["lng"]))
+
+    sale_ids = args.get("sale_ids") or []
+    if not sale_ids:
+        return {"error": "no_sales_provided"}
+    if len(sale_ids) > MAX_STOPS:
+        return {"error": "too_many_stops", "max": MAX_STOPS}
+
+    from .models import Sale
+    from sqlalchemy import select
+    res = await db.execute(select(Sale).where(Sale.id.in_(sale_ids)))
+    sales = res.scalars().all()
+    if not sales:
+        return {"error": "no_sales_found"}
+
+    inputs: list[SaleInput] = []
+    sale_lookup: dict[str, Sale] = {}
+    for s in sales:
+        if s.lat is None or s.lng is None:
+            continue
+        end_dt = None
+        if s.end_date and s.end_time:
+            try:
+                end_dt = datetime.combine(
+                    date_cls.fromisoformat(s.end_date),
+                    time_cls.fromisoformat(s.end_time),
+                )
+            except ValueError:
+                end_dt = None
+        inputs.append(SaleInput(id=s.id, lat=s.lat, lng=s.lng, end_datetime=end_dt))
+        sale_lookup[s.id] = s
+
+    route = plan_route(start, inputs, now=datetime.now(timezone.utc).replace(tzinfo=None))
+    return {
+        "route": {
+            "stops": [
+                {
+                    "sale_id": st.sale_id,
+                    "eta_minutes": round(st.eta_minutes, 1),
+                    "in_window": st.in_window,
+                    "title": sale_lookup[st.sale_id].title,
+                    "address": sale_lookup[st.sale_id].address,
+                    "lat": sale_lookup[st.sale_id].lat,
+                    "lng": sale_lookup[st.sale_id].lng,
+                }
+                for st in route.stops
+            ],
+            "total_distance_miles": round(route.total_distance_miles, 2),
+            "total_duration_minutes": round(route.total_duration_minutes, 1),
+        }
+    }
 
 
 TOOLS: list[ToolDef] = [
@@ -195,5 +244,33 @@ TOOLS: list[ToolDef] = [
         ),
         input_schema=ToolInputSchema(),
         ui_component="SaleForm",
+    ),
+    ToolDef(
+        name="plan_route",
+        description=(
+            "Plan an ordered driving route through selected yard sales. "
+            "Returns stops in visit order with ETAs and in-window flags. "
+            "Requires start_location {lat, lng} and 1-10 sale_ids."
+        ),
+        input_schema=ToolInputSchema(
+            properties={
+                "sale_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Yard sale IDs (UUID strings) to include, 1-10.",
+                },
+                "start_location": {
+                    "type": "object",
+                    "properties": {
+                        "lat": {"type": "number"},
+                        "lng": {"type": "number"},
+                    },
+                    "required": ["lat", "lng"],
+                    "description": "Starting coordinates for the route.",
+                },
+            },
+            required=["sale_ids", "start_location"],
+        ),
+        handler=plan_route_handler,
     ),
 ]

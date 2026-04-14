@@ -295,3 +295,35 @@ async def test_get_my_sales_lists_own_rows(app_and_token):
     rows = resp.json()
     assert len(rows) == 1
     assert rows[0]["title"] == "One"
+
+
+async def test_plan_route_endpoint_returns_ordered_stops(
+    app_and_token, seed_two_sales
+):
+    client, token = app_and_token
+    sale_ids = seed_two_sales
+    resp = await client.post(
+        "/api/plugins/yardsailing/plan_route",
+        json={
+            "sale_ids": sale_ids,
+            "start_location": {"lat": 0.0, "lng": 0.0},
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "route" in body
+    assert len(body["route"]["stops"]) == 2
+
+
+async def test_plan_route_endpoint_rejects_over_cap(app_and_token):
+    client, token = app_and_token
+    resp = await client.post(
+        "/api/plugins/yardsailing/plan_route",
+        json={
+            "sale_ids": [str(i) for i in range(1, 12)],
+            "start_location": {"lat": 0.0, "lng": 0.0},
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400

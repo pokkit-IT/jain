@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = f"sqlite+aiosqlite:///{_BACKEND_DIR}/jain.db"
 
+    # Uploads (sale photos, etc.)
+    UPLOADS_DIR: str = "uploads"  # project-relative, overridable via env
+
     # Plugins
     PLUGINS_DIR: str = str((_REPO_DIR.parent / "jain-plugins" / "plugins").resolve())
 

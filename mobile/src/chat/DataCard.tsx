@@ -31,6 +31,11 @@ export function DataCard({ displayHint, data }: DataCardProps) {
   const [planning, setPlanning] = React.useState(false);
   const [planError, setPlanError] = React.useState<string | null>(null);
 
+  if (displayHint === "route" && data && typeof data === "object" && "route" in data) {
+    const route = (data as { route: PlannedRoute }).route;
+    return <RouteCard route={route} />;
+  }
+
   if (displayHint === "map" && data && typeof data === "object" && "sales" in data) {
     const sales = ((data as { sales: SaleWithDistance[] }).sales ?? []);
 

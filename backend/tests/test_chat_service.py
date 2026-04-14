@@ -420,3 +420,32 @@ async def test_chat_service_extracts_choices(registry, monkeypatch):
     reply = await service.send([{"role": "user", "content": "help"}])
     assert reply.text == "Pick one:"
     assert reply.choices == ["Option A", "Option B"]
+
+
+def test_infer_display_hint_plan_route_returns_route():
+    from app.services.chat_service import _infer_display_hint
+
+    route_data = {
+        "route": {
+            "stops": [{"sale_id": 1, "eta_minutes": 5.0, "in_window": True}],
+            "total_distance_miles": 1.2,
+            "total_duration_minutes": 10.0,
+        }
+    }
+    hint = _infer_display_hint("yardsailing", "plan_route", route_data)
+    assert hint == "route"
+
+
+def test_infer_display_hint_plan_route_error_returns_none():
+    from app.services.chat_service import _infer_display_hint
+
+    hint = _infer_display_hint("yardsailing", "plan_route", {"error": "no_sales_found"})
+    assert hint is None
+
+
+def test_infer_display_hint_find_yard_sales_returns_map():
+    from app.services.chat_service import _infer_display_hint
+
+    sales_data = {"sales": [{"id": 1, "title": "Garage sale"}]}
+    hint = _infer_display_hint("yardsailing", "find_yard_sales", sales_data)
+    assert hint == "map"

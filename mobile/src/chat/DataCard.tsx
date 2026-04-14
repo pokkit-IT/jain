@@ -1,3 +1,4 @@
+import * as Location from "expo-location";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -14,8 +15,12 @@ export interface DataCardProps {
 type SaleWithDistance = Sale & { distance_miles?: number };
 
 async function getCurrentStartLocation(): Promise<{ lat: number; lng: number }> {
-  // Placeholder — actual expo-location integration in Task 8.
-  return { lat: 0, lng: 0 };
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== "granted") {
+    throw new Error("Location permission denied");
+  }
+  const pos = await Location.getCurrentPositionAsync({});
+  return { lat: pos.coords.latitude, lng: pos.coords.longitude };
 }
 
 export function DataCard({ displayHint, data }: DataCardProps) {

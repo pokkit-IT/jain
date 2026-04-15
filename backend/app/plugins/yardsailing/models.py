@@ -74,6 +74,12 @@ class Sale(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False,
     )
+    source: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="host", server_default="host",
+    )
+    confirmations: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1",
+    )
 
     owner: Mapped[User] = relationship()
     tag_rows: Mapped[list["SaleTag"]] = relationship(

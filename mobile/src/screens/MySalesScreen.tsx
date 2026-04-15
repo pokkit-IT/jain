@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 
 import { deleteSale, fetchMySales } from "../api/yardsailing";
+import { SaleDetailsModal } from "../core/SaleDetailsModal";
 import { useAppStore } from "../store/useAppStore";
 import type { Sale } from "../types";
 
@@ -19,6 +20,7 @@ export function MySalesScreen() {
   const [sales, setSales] = React.useState<Sale[]>([]);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [selected, setSelected] = React.useState<Sale | null>(null);
 
   const load = React.useCallback(async () => {
     setRefreshing(true);
@@ -70,30 +72,33 @@ export function MySalesScreen() {
   }
 
   return (
-    <FlatList
-      data={sales}
-      keyExtractor={(s) => s.id}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} />}
-      contentContainerStyle={sales.length === 0 ? styles.empty : styles.list}
-      ListEmptyComponent={
-        <Text style={styles.emptyText}>
-          {error ?? "No sales yet. Create one from the Jain tab."}
-        </Text>
-      }
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.address}>{item.address}</Text>
-          <Text style={styles.meta}>
-            {item.start_date ?? ""} {item.start_time ? `· ${item.start_time}` : ""}
-            {item.end_time ? `–${item.end_time}` : ""}
+    <>
+      <FlatList
+        data={sales}
+        keyExtractor={(s) => s.id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} />}
+        contentContainerStyle={sales.length === 0 ? styles.empty : styles.list}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            {error ?? "No sales yet. Create one from the Jain tab."}
           </Text>
-          <Pressable style={styles.deleteBtn} onPress={() => confirmDelete(item)}>
-            <Text style={styles.deleteText}>Delete</Text>
+        }
+        renderItem={({ item }) => (
+          <Pressable style={styles.card} onPress={() => setSelected(item)}>
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.address}>{item.address}</Text>
+            <Text style={styles.meta}>
+              {item.start_date ?? ""} {item.start_time ? `· ${item.start_time}` : ""}
+              {item.end_time ? `–${item.end_time}` : ""}
+            </Text>
+            <Pressable style={styles.deleteBtn} onPress={() => confirmDelete(item)}>
+              <Text style={styles.deleteText}>Delete</Text>
+            </Pressable>
           </Pressable>
-        </View>
-      )}
-    />
+        )}
+      />
+      <SaleDetailsModal sale={selected} onClose={() => setSelected(null)} />
+    </>
   );
 }
 

@@ -12,20 +12,30 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import {
   fetchCuratedTags,
-  fetchGroups,
   fetchRecentSales,
+  postSighting,
 } from "../api/yardsailing";
 import { Map } from "../core/Map";
 import { SaleDetailsModal } from "../core/SaleDetailsModal";
+import { SightingPopup } from "../core/SightingPopup";
 import { useLocation } from "../hooks/useLocation";
 import { useAppStore } from "../store/useAppStore";
 import type { Sale, SaleGroupSummary } from "../types";
+
+function pad2(n: number) { return n < 10 ? `0${n}` : String(n); }
+function nowHHMM(): string {
+  const d = new Date();
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
 
 export function MapScreen() {
   const location = useLocation();
   const sales = useAppStore((s) => s.sales);
   const setSales = useAppStore((s) => s.setSales);
   const [selected, setSelected] = React.useState<Sale | null>(null);
+  const [selectedSighting, setSelectedSighting] = React.useState<Sale | null>(null);
+  const [pendingDrop, setPendingDrop] = React.useState<{ lat: number; lng: number } | null>(null);
+  const [dropping, setDropping] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [availableTags, setAvailableTags] = React.useState<string[]>([]);
   const [activeTags, setActiveTags] = React.useState<string[]>([]);
@@ -118,48 +128,20 @@ export function MapScreen() {
           </Pressable>
         ) : null}
       </View>
-      <Modal
-        transparent
-        animationType="fade"
-        visible={groupSheetOpen}
-        onRequestClose={() => setGroupSheetOpen(false)}
-      >
-        <View style={styles.sheetBackdrop}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setGroupSheetOpen(false)}
-          />
-          <View style={styles.sheetCard}>
-            <Text style={styles.sheetTitle}>Filter by group</Text>
-            <ScrollView style={{ maxHeight: 320 }}>
-              <Pressable
-                style={styles.sheetRow}
-                onPress={() => { setActiveGroup(null); setGroupSheetOpen(false); }}
-              >
-                <Text style={styles.sheetRowText}>All sales</Text>
-              </Pressable>
-              {availableGroups.map((g) => (
-                <Pressable
-                  key={g.id}
-                  style={styles.sheetRow}
-                  onPress={() => { setActiveGroup(g); setGroupSheetOpen(false); }}
-                >
-                  <Text style={styles.sheetRowText}>{g.name}</Text>
-                  {g.start_date && g.end_date ? (
-                    <Text style={styles.sheetRowDates}>
-                      {g.start_date} – {g.end_date}
-                    </Text>
-                  ) : null}
-                </Pressable>
-              ))}
-              {availableGroups.length === 0 ? (
-                <Text style={styles.sheetEmpty}>No groups yet.</Text>
-              ) : null}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-      <Map region={region} sales={sales} onPinPress={setSelected} />
+      <Map
+        region={region}
+        sales={sales}
+        onPinPress={setSelected}
+        onSightingPress={setSelectedSighting}
+        onLongPress={(c) => {
+          const hh = parseInt(nowHHMM().slice(0, 2), 10);
+          if (hh >= 17) {
+            // past the drop cutoff — no-op with a light hint
+            return;
+          }
+          setPendingDrop(c);
+        }}
+      />
       <Pressable
         accessibilityLabel="Refresh sales"
         style={styles.fab}
@@ -173,6 +155,62 @@ export function MapScreen() {
         )}
       </Pressable>
       <SaleDetailsModal sale={selected} onClose={() => setSelected(null)} />
+      <SightingPopup
+        sale={selectedSighting}
+        onClose={() => setSelectedSighting(null)}
+      />
+      <Modal
+        transparent
+        animationType="fade"
+        visible={pendingDrop !== null}
+        onRequestClose={() => setPendingDrop(null)}
+      >
+        <View style={styles.dropBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => !dropping && setPendingDrop(null)}
+          />
+          <View style={styles.dropCard}>
+            <Text style={styles.dropTitle}>Drop unconfirmed sale?</Text>
+            {pendingDrop ? (
+              <Text style={styles.dropCoords}>
+                {pendingDrop.lat.toFixed(5)}, {pendingDrop.lng.toFixed(5)}
+              </Text>
+            ) : null}
+            <Text style={styles.dropHint}>
+              If someone else drops a pin here too, it'll be marked Confirmed.
+            </Text>
+            <Pressable
+              style={[styles.dropBtn, dropping && { opacity: 0.6 }]}
+              disabled={dropping || !pendingDrop}
+              onPress={async () => {
+                if (!pendingDrop) return;
+                setDropping(true);
+                try {
+                  await postSighting(pendingDrop.lat, pendingDrop.lng, nowHHMM());
+                  setPendingDrop(null);
+                  await refresh();
+                } catch (e) {
+                  // eslint-disable-next-line no-console
+                  console.log("[MapScreen] drop failed:", e);
+                } finally {
+                  setDropping(false);
+                }
+              }}
+            >
+              <Text style={styles.dropBtnText}>
+                {dropping ? "Dropping…" : "Drop pin"}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.dropCancel}
+              onPress={() => !dropping && setPendingDrop(null)}
+            >
+              <Text style={styles.dropCancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -241,25 +279,23 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fabText: { color: "#fff", fontSize: 24, lineHeight: 26, fontWeight: "700" },
-  sheetBackdrop: {
+  dropBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
+    justifyContent: "center",
+    paddingHorizontal: 24,
   },
-  sheetCard: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
+  dropCard: { backgroundColor: "#fff", borderRadius: 14, padding: 20 },
+  dropTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  dropCoords: { fontSize: 14, color: "#475569", marginBottom: 8 },
+  dropHint: { fontSize: 13, color: "#64748b", marginBottom: 16 },
+  dropBtn: {
+    backgroundColor: "#f59e0b",
     paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
   },
-  sheetTitle: { fontSize: 15, fontWeight: "700", paddingHorizontal: 16, paddingBottom: 8 },
-  sheetRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-  },
-  sheetRowText: { fontSize: 14, color: "#0f172a", fontWeight: "600" },
-  sheetRowDates: { fontSize: 12, color: "#64748b", marginTop: 2 },
-  sheetEmpty: { padding: 16, color: "#64748b", fontSize: 13 },
+  dropBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  dropCancel: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
+  dropCancelText: { color: "#64748b", fontSize: 14 },
 });

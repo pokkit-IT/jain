@@ -33,12 +33,14 @@ export async function fetchRecentSales(filter: RecentSalesFilter = {}): Promise<
   return res.data;
 }
 
-export async function fetchGroups(query: string = ""): Promise<SaleGroupSummary[]> {
-  const url = query
-    ? `/api/plugins/yardsailing/groups?q=${encodeURIComponent(query)}`
-    : "/api/plugins/yardsailing/groups";
-  const res = await apiClient.get<SaleGroupSummary[]>(url);
-  return res.data;
+export async function postSighting(
+  lat: number, lng: number, nowHHMM: string,
+): Promise<Sale> {
+  const { data } = await apiClient.post<Sale>(
+    "/api/plugins/yardsailing/sightings",
+    { lat, lng, now_hhmm: nowHHMM },
+  );
+  return data;
 }
 
 export async function fetchCuratedTags(): Promise<string[]> {

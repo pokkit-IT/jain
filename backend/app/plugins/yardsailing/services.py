@@ -167,6 +167,17 @@ async def list_recent_sales(
 
     stmt = select(Sale).options(selectinload(Sale.photos), selectinload(Sale.groups)).where(effective_end >= today)
 
+    # Filter out expired unconfirmed sightings (>2h old, confirmations=1).
+    from .sightings import UNCONFIRMED_TTL_MINUTES
+    cutoff = datetime.now() - timedelta(minutes=UNCONFIRMED_TTL_MINUTES)
+    stmt = stmt.where(
+        or_(
+            Sale.source != "sighting",
+            Sale.confirmations >= 2,
+            Sale.created_at >= cutoff,
+        )
+    )
+
     # only_happening_now is applied in Python after the query so we can
     # honor per-day SaleDay overrides. The cheap date bounds stay in SQL.
     if only_happening_now:

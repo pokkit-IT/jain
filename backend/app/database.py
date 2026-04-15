@@ -37,6 +37,8 @@ async def _apply_dev_migrations(conn) -> None:
     wants = [
         ("yardsailing_sales", "lat", "REAL"),
         ("yardsailing_sales", "lng", "REAL"),
+        ("yardsailing_sales", "source", "VARCHAR(16) NOT NULL DEFAULT 'host'"),
+        ("yardsailing_sales", "confirmations", "INTEGER NOT NULL DEFAULT 1"),
     ]
     for table, col, coltype in wants:
         if not await conn.run_sync(_table_exists, table):

@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.models.user import User
 
 from .geocoding import geocode
-from .models import Sale, SaleDay, SaleTag
+from .models import Sale, SaleDay, SaleTag, sale_group_memberships
 from .photos import sale_folder
 from .tags import normalize as _norm_tag
 
@@ -139,7 +139,7 @@ async def list_sales_for_owner(db: AsyncSession, user: User) -> list[Sale]:
     """All sales owned by `user`, most recent first."""
     result = await db.execute(
         select(Sale)
-        .options(selectinload(Sale.photos))
+        .options(selectinload(Sale.photos), selectinload(Sale.groups))
         .where(Sale.owner_id == user.id)
         .order_by(Sale.created_at.desc()),
     )
@@ -152,6 +152,7 @@ async def list_recent_sales(
     tags: list[str] | None = None,
     query: str | None = None,
     only_happening_now: bool = False,
+    group_id: str | None = None,
 ) -> list[Sale]:
     """Upcoming/in-progress sales, most recent first.
 
@@ -164,7 +165,7 @@ async def list_recent_sales(
     today = date.today().isoformat()
     effective_end = func.coalesce(Sale.end_date, Sale.start_date)
 
-    stmt = select(Sale).options(selectinload(Sale.photos)).where(effective_end >= today)
+    stmt = select(Sale).options(selectinload(Sale.photos), selectinload(Sale.groups)).where(effective_end >= today)
 
     # only_happening_now is applied in Python after the query so we can
     # honor per-day SaleDay overrides. The cheap date bounds stay in SQL.
@@ -195,6 +196,14 @@ async def list_recent_sales(
             )
         )
 
+    if group_id:
+        stmt = stmt.where(
+            Sale.id.in_(
+                select(sale_group_memberships.c.sale_id)
+                .where(sale_group_memberships.c.group_id == group_id)
+            )
+        )
+
     stmt = stmt.order_by(Sale.created_at.desc()).limit(limit)
     result = await db.execute(stmt)
     sales = list(result.scalars().unique().all())
@@ -216,7 +225,7 @@ def _is_open_now(sale: Sale, today: str, now_time: str) -> bool:
 
 async def get_sale_by_id(db: AsyncSession, sale_id: str) -> Sale | None:
     result = await db.execute(
-        select(Sale).options(selectinload(Sale.photos)).where(Sale.id == sale_id)
+        select(Sale).options(selectinload(Sale.photos), selectinload(Sale.groups)).where(Sale.id == sale_id)
     )
     return result.scalar_one_or_none()
 

@@ -124,17 +124,21 @@
     address: "",
     start_date: "",
     end_date: "",
-    start_time: "",
-    end_time: "",
+    start_time: "08:00",
+    end_time: "17:00",
     tags: [],
     days: []
   };
   function SaleForm({ initialData, bridge }) {
+    var _a, _b;
     const [data, setData] = (0, import_react.useState)(__spreadValues(__spreadValues({}, EMPTY), initialData));
     const [submitting, setSubmitting] = (0, import_react.useState)(false);
     const [error, setError] = (0, import_react.useState)(null);
     const [success, setSuccess] = (0, import_react.useState)(null);
     const [tagVocab, setTagVocab] = (0, import_react.useState)(FALLBACK_TAGS);
+    const [perDayHours, setPerDayHours] = (0, import_react.useState)(
+      ((_b = (_a = initialData == null ? void 0 : initialData.days) == null ? void 0 : _a.length) != null ? _b : 0) > 0
+    );
     (0, import_react.useEffect)(() => {
       bridge.callPluginApi("/api/plugins/yardsailing/tags", "GET", null).then((res) => {
         const tags = res == null ? void 0 : res.tags;
@@ -147,7 +151,7 @@
     const multiDay = rangeDates.length > 1;
     const [picker, setPicker] = (0, import_react.useState)(null);
     const applyPick = (target, selected) => {
-      var _a, _b;
+      var _a2, _b2;
       if (target.kind === "date") {
         const iso = dateToIso(selected);
         set(target.field, iso);
@@ -156,8 +160,8 @@
         }
       } else if ("dayDate" in target) {
         const existing = data.days.find((x) => x.day_date === target.dayDate);
-        const st = target.which === "start" ? timeToHHMM(selected) : (_a = existing == null ? void 0 : existing.start_time) != null ? _a : data.start_time;
-        const et = target.which === "end" ? timeToHHMM(selected) : (_b = existing == null ? void 0 : existing.end_time) != null ? _b : data.end_time;
+        const st = target.which === "start" ? timeToHHMM(selected) : (_a2 = existing == null ? void 0 : existing.start_time) != null ? _a2 : data.start_time;
+        const et = target.which === "end" ? timeToHHMM(selected) : (_b2 = existing == null ? void 0 : existing.end_time) != null ? _b2 : data.end_time;
         setDayHours(target.dayDate, st, et);
       } else {
         set(target.field, timeToHHMM(selected));
@@ -277,11 +281,23 @@
         onPress: () => setPicker({ kind: "time", field: "end_time" })
       },
       /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: data.end_time ? styles.pickerText : styles.pickerPlaceholder }, data.end_time || "Select time")
-    ))), multiDay ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Per-day hours"), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.hint }, "Adjust any day if hours differ from the defaults above."), rangeDates.map((d) => {
-      var _a, _b;
+    ))), multiDay ? /* @__PURE__ */ import_react.default.createElement(
+      import_react_native.TouchableOpacity,
+      {
+        style: styles.checkboxRow,
+        onPress: () => {
+          const next = !perDayHours;
+          setPerDayHours(next);
+          if (!next) setData((d) => __spreadProps(__spreadValues({}, d), { days: [] }));
+        }
+      },
+      /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: [styles.checkbox, perDayHours && styles.checkboxOn] }, perDayHours ? /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.checkboxMark }, "\u2713") : null),
+      /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.checkboxLabel }, "Times are different per day")
+    ) : null, multiDay && perDayHours ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.hint }, "Adjust any day if hours differ from the defaults above."), rangeDates.map((d) => {
+      var _a2, _b2;
       const override = data.days.find((x) => x.day_date === d);
-      const st = (_a = override == null ? void 0 : override.start_time) != null ? _a : data.start_time;
-      const et = (_b = override == null ? void 0 : override.end_time) != null ? _b : data.end_time;
+      const st = (_a2 = override == null ? void 0 : override.start_time) != null ? _a2 : data.start_time;
+      const et = (_b2 = override == null ? void 0 : override.end_time) != null ? _b2 : data.end_time;
       return /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { key: d, style: styles.dayRow }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.dayDate }, d), /* @__PURE__ */ import_react.default.createElement(
         import_react_native.Pressable,
         {
@@ -310,14 +326,14 @@
       );
     })), picker ? (() => {
       const pickerValue = (() => {
-        var _a, _b;
+        var _a2, _b2;
         if (picker.kind === "date") {
           const iso = data[picker.field] || data.start_date;
           return parseIsoDate(iso);
         }
         if ("dayDate" in picker) {
           const row = data.days.find((x) => x.day_date === picker.dayDate);
-          const hhmm = (picker.which === "start" ? (_a = row == null ? void 0 : row.start_time) != null ? _a : data.start_time : (_b = row == null ? void 0 : row.end_time) != null ? _b : data.end_time) || "09:00";
+          const hhmm = (picker.which === "start" ? (_a2 = row == null ? void 0 : row.start_time) != null ? _a2 : data.start_time : (_b2 = row == null ? void 0 : row.end_time) != null ? _b2 : data.end_time) || "09:00";
           return parseHHMM(hhmm);
         }
         return parseHHMM(data[picker.field] || "09:00");
@@ -460,6 +476,37 @@
       backgroundColor: "rgba(0,0,0,0.5)",
       justifyContent: "center",
       paddingHorizontal: 16
+    },
+    checkboxRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 12,
+      marginBottom: 4
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: "#94a3b8",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 8,
+      backgroundColor: "#fff"
+    },
+    checkboxOn: {
+      backgroundColor: "#2563eb",
+      borderColor: "#2563eb"
+    },
+    checkboxMark: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "700",
+      lineHeight: 14
+    },
+    checkboxLabel: {
+      fontSize: 14,
+      color: "#0f172a"
     },
     modalCard: {
       backgroundColor: "#fff",

@@ -103,8 +103,8 @@ const EMPTY: SaleFormData = {
   address: "",
   start_date: "",
   end_date: "",
-  start_time: "",
-  end_time: "",
+  start_time: "08:00",
+  end_time: "17:00",
   tags: [],
   days: [],
 };
@@ -115,6 +115,9 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [tagVocab, setTagVocab] = useState<string[]>(FALLBACK_TAGS);
+  const [perDayHours, setPerDayHours] = useState<boolean>(
+    (initialData?.days?.length ?? 0) > 0,
+  );
 
   useEffect(() => {
     // Pull the curated list from the server so the vocabulary stays in
@@ -336,8 +339,23 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
       </View>
 
       {multiDay ? (
+        <TouchableOpacity
+          style={styles.checkboxRow}
+          onPress={() => {
+            const next = !perDayHours;
+            setPerDayHours(next);
+            if (!next) setData((d) => ({ ...d, days: [] }));
+          }}
+        >
+          <View style={[styles.checkbox, perDayHours && styles.checkboxOn]}>
+            {perDayHours ? <Text style={styles.checkboxMark}>✓</Text> : null}
+          </View>
+          <Text style={styles.checkboxLabel}>Times are different per day</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {multiDay && perDayHours ? (
         <>
-          <Text style={styles.label}>Per-day hours</Text>
           <Text style={styles.hint}>
             Adjust any day if hours differ from the defaults above.
           </Text>
@@ -552,6 +570,37 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     paddingHorizontal: 16,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#94a3b8",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+    backgroundColor: "#fff",
+  },
+  checkboxOn: {
+    backgroundColor: "#2563eb",
+    borderColor: "#2563eb",
+  },
+  checkboxMark: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 14,
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: "#0f172a",
   },
   modalCard: {
     backgroundColor: "#fff",

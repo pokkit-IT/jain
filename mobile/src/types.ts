@@ -59,6 +59,15 @@ export interface Sale {
   tags?: string[];
   days?: DayHours[];
   photos?: SalePhoto[];
+  groups?: SaleGroupSummary[];
+}
+
+export interface SaleGroupSummary {
+  id: string;
+  name: string;
+  slug: string;
+  start_date: string | null;
+  end_date: string | null;
 }
 
 export interface JainUser {

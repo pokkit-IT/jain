@@ -37,6 +37,10 @@
     {
       "prompt": "I want to create a yard sale",
       "description": "Opens the sale creation form"
+    },
+    {
+      "prompt": "Find yard sales in the 100 Mile Yard Sale",
+      "description": "Filter the map by a named group/event"
     }
   ]
 }

@@ -120,6 +120,15 @@ export function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
                 ))}
               </View>
             ) : null}
+            {sale.groups && sale.groups.length > 0 ? (
+              <View style={styles.tagRow}>
+                {sale.groups.map((g) => (
+                  <View key={g.id} style={styles.groupChip}>
+                    <Text style={styles.groupChipText}>{g.name}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
             {sale.description ? (
               <Text style={styles.desc}>{sale.description}</Text>
             ) : null}
@@ -209,6 +218,15 @@ const styles = StyleSheet.create({
     borderColor: "#bfdbfe",
   },
   tagText: { fontSize: 12, color: "#1d4ed8", fontWeight: "600", textTransform: "capitalize" },
+  groupChip: {
+    backgroundColor: "#ede9fe",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginTop: 4,
+  },
+  groupChipText: { fontSize: 12, color: "#6d28d9", fontWeight: "600" },
   carousel: { height: 240, marginBottom: 12 },
   carouselImage: {
     width: Dimensions.get("window").width - 24,

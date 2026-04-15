@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,12 +10,16 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 
-import { fetchCuratedTags, fetchRecentSales } from "../api/yardsailing";
+import {
+  fetchCuratedTags,
+  fetchGroups,
+  fetchRecentSales,
+} from "../api/yardsailing";
 import { Map } from "../core/Map";
 import { SaleDetailsModal } from "../core/SaleDetailsModal";
 import { useLocation } from "../hooks/useLocation";
 import { useAppStore } from "../store/useAppStore";
-import type { Sale } from "../types";
+import type { Sale, SaleGroupSummary } from "../types";
 
 export function MapScreen() {
   const location = useLocation();
@@ -25,6 +30,9 @@ export function MapScreen() {
   const [availableTags, setAvailableTags] = React.useState<string[]>([]);
   const [activeTags, setActiveTags] = React.useState<string[]>([]);
   const [happeningNow, setHappeningNow] = React.useState(false);
+  const [availableGroups, setAvailableGroups] = React.useState<SaleGroupSummary[]>([]);
+  const [activeGroup, setActiveGroup] = React.useState<SaleGroupSummary | null>(null);
+  const [groupSheetOpen, setGroupSheetOpen] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -32,6 +40,7 @@ export function MapScreen() {
       const fresh = await fetchRecentSales({
         tags: activeTags,
         happeningNow,
+        groupId: activeGroup?.id,
       });
       setSales(fresh);
     } catch (e) {
@@ -40,7 +49,7 @@ export function MapScreen() {
     } finally {
       setLoading(false);
     }
-  }, [setSales, activeTags, happeningNow]);
+  }, [setSales, activeTags, happeningNow, activeGroup]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -50,6 +59,7 @@ export function MapScreen() {
 
   React.useEffect(() => {
     fetchCuratedTags().then(setAvailableTags).catch(() => {});
+    fetchGroups().then(setAvailableGroups).catch(() => {});
   }, []);
 
   const toggleTag = (tag: string) => {
@@ -81,6 +91,11 @@ export function MapScreen() {
             onPress={() => setHappeningNow((v) => !v)}
             accent
           />
+          <Chip
+            label={activeGroup ? activeGroup.name : "Groups"}
+            active={!!activeGroup}
+            onPress={() => setGroupSheetOpen(true)}
+          />
           {availableTags.map((tag) => (
             <Chip
               key={tag}
@@ -90,18 +105,60 @@ export function MapScreen() {
             />
           ))}
         </ScrollView>
-        {(activeTags.length > 0 || happeningNow) ? (
+        {(activeTags.length > 0 || happeningNow || activeGroup) ? (
           <Pressable
             style={styles.clearBtn}
             onPress={() => {
               setActiveTags([]);
               setHappeningNow(false);
+              setActiveGroup(null);
             }}
           >
             <Text style={styles.clearText}>Clear</Text>
           </Pressable>
         ) : null}
       </View>
+      <Modal
+        transparent
+        animationType="fade"
+        visible={groupSheetOpen}
+        onRequestClose={() => setGroupSheetOpen(false)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setGroupSheetOpen(false)}
+          />
+          <View style={styles.sheetCard}>
+            <Text style={styles.sheetTitle}>Filter by group</Text>
+            <ScrollView style={{ maxHeight: 320 }}>
+              <Pressable
+                style={styles.sheetRow}
+                onPress={() => { setActiveGroup(null); setGroupSheetOpen(false); }}
+              >
+                <Text style={styles.sheetRowText}>All sales</Text>
+              </Pressable>
+              {availableGroups.map((g) => (
+                <Pressable
+                  key={g.id}
+                  style={styles.sheetRow}
+                  onPress={() => { setActiveGroup(g); setGroupSheetOpen(false); }}
+                >
+                  <Text style={styles.sheetRowText}>{g.name}</Text>
+                  {g.start_date && g.end_date ? (
+                    <Text style={styles.sheetRowDates}>
+                      {g.start_date} – {g.end_date}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+              {availableGroups.length === 0 ? (
+                <Text style={styles.sheetEmpty}>No groups yet.</Text>
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       <Map region={region} sales={sales} onPinPress={setSelected} />
       <Pressable
         accessibilityLabel="Refresh sales"
@@ -184,4 +241,25 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fabText: { color: "#fff", fontSize: 24, lineHeight: 26, fontWeight: "700" },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  sheetCard: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    paddingVertical: 12,
+  },
+  sheetTitle: { fontSize: 15, fontWeight: "700", paddingHorizontal: 16, paddingBottom: 8 },
+  sheetRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+  },
+  sheetRowText: { fontSize: 14, color: "#0f172a", fontWeight: "600" },
+  sheetRowDates: { fontSize: 12, color: "#64748b", marginTop: 2 },
+  sheetEmpty: { padding: 16, color: "#64748b", fontSize: 13 },
 });

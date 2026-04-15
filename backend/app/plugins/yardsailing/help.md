@@ -18,6 +18,12 @@ Tag your sales with categories (Furniture, Toys, Tools, Baby Items, Clothing, Bo
 
 You can also ask Jain in plain English: *"find yard sales near me with baby items"* or *"what's happening right now?"* — the LLM knows the tag vocabulary and routes the search correctly.
 
+## Groups
+
+Group sales together under a named event like "Maple Street Neighborhood Sale" or "100 Mile Yard Sale". When you create a sale, the form has a **Groups** search — type to find an existing group or create a new one. A group can optionally have a date window (e.g. "100 Mile Yard Sale" runs the first weekend of May); when it does, your sale's dates must fall inside the window to join.
+
+On the **Map** tab, tap the **Groups** chip to filter pins down to a single event.
+
 ## Tips
 
 - **Be specific with addresses** — "1816 W Eseco Rd, Cushing, OK" geocodes better than "my place."

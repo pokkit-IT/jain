@@ -8,3 +8,7 @@
 # Plugin build artifacts
 backend/app/plugins/yardsailing/node_modules/
 backend/app/plugins/yardsailing/package-lock.json
+
+# Sale photo uploads (keep .gitkeep sentinel, ignore actual uploads)
+backend/uploads/*
+!backend/uploads/.gitkeep

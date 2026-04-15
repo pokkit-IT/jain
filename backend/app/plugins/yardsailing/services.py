@@ -1,13 +1,16 @@
+import shutil
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.user import User
 
 from .geocoding import geocode
 from .models import Sale, SaleDay, SaleTag
+from .photos import sale_folder
 from .tags import normalize as _norm_tag
 
 
@@ -135,7 +138,10 @@ async def create_sale(db: AsyncSession, user: User, data: CreateSaleInput) -> Sa
 async def list_sales_for_owner(db: AsyncSession, user: User) -> list[Sale]:
     """All sales owned by `user`, most recent first."""
     result = await db.execute(
-        select(Sale).where(Sale.owner_id == user.id).order_by(Sale.created_at.desc()),
+        select(Sale)
+        .options(selectinload(Sale.photos))
+        .where(Sale.owner_id == user.id)
+        .order_by(Sale.created_at.desc()),
     )
     return list(result.scalars().all())
 
@@ -158,7 +164,7 @@ async def list_recent_sales(
     today = date.today().isoformat()
     effective_end = func.coalesce(Sale.end_date, Sale.start_date)
 
-    stmt = select(Sale).where(effective_end >= today)
+    stmt = select(Sale).options(selectinload(Sale.photos)).where(effective_end >= today)
 
     # only_happening_now is applied in Python after the query so we can
     # honor per-day SaleDay overrides. The cheap date bounds stay in SQL.
@@ -209,7 +215,10 @@ def _is_open_now(sale: Sale, today: str, now_time: str) -> bool:
 
 
 async def get_sale_by_id(db: AsyncSession, sale_id: str) -> Sale | None:
-    return await db.get(Sale, sale_id)
+    result = await db.execute(
+        select(Sale).options(selectinload(Sale.photos)).where(Sale.id == sale_id)
+    )
+    return result.scalar_one_or_none()
 
 
 async def update_sale(
@@ -245,5 +254,7 @@ async def update_sale(
 
 
 async def delete_sale(db: AsyncSession, sale: Sale) -> None:
+    sale_id = sale.id
     await db.delete(sale)
     await db.commit()
+    shutil.rmtree(sale_folder(sale_id), ignore_errors=True)

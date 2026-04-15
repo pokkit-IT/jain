@@ -1,7 +1,8 @@
 import * as Location from "expo-location";
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { absUrl } from "../api/client";
 import { planRoute, Route as PlannedRoute } from "../api/yardsailing";
 import { SaleDetailsModal } from "../core/SaleDetailsModal";
 import { Sale } from "../types";
@@ -120,6 +121,12 @@ export function DataCard({ displayHint, data }: DataCardProps) {
                       {isChecked ? <Text style={styles.checkMark}>✓</Text> : null}
                     </View>
                   ) : null}
+                  {sale.photos && sale.photos.length > 0 ? (
+                    <Image
+                      source={{ uri: absUrl(sale.photos[0].thumb_url) }}
+                      style={styles.hero}
+                    />
+                  ) : null}
                   <View style={{ flex: 1 }}>
                     <View style={styles.cardInnerRow}>
                       <Text style={styles.title} numberOfLines={1}>{sale.title}</Text>
@@ -210,6 +217,13 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   cardChecked: { backgroundColor: "#eff6ff", borderColor: "#93c5fd" },
+  hero: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    marginRight: 10,
+    backgroundColor: "#f1f5f9",
+  },
   cardRow: {
     flexDirection: "row",
     alignItems: "flex-start",

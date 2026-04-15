@@ -1,5 +1,7 @@
 import React from "react";
 import {
+  Dimensions,
+  Image,
   Linking,
   Modal,
   Platform,
@@ -10,7 +12,10 @@ import {
   View,
 } from "react-native";
 
-import type { Sale } from "../types";
+import { absUrl } from "../api/client";
+import { useAppStore } from "../store/useAppStore";
+import type { Sale, SalePhoto } from "../types";
+import { ManagePhotosSheet } from "./ManagePhotosSheet";
 
 export interface SaleDetailsModalProps {
   sale: Sale | null;
@@ -32,7 +37,20 @@ function directionsUrl(sale: Sale): string {
 }
 
 export function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
+  const session = useAppStore((s) => s.session);
+
+  const [managing, setManaging] = React.useState(false);
+  const [localPhotos, setLocalPhotos] = React.useState<SalePhoto[]>(
+    sale?.photos ?? [],
+  );
+
+  React.useEffect(() => {
+    setLocalPhotos(sale?.photos ?? []);
+  }, [sale?.id]);
+
   if (!sale) return null;
+
+  const isOwner = session?.user.id === sale.owner_id;
 
   const days = sale.days ?? [];
   const isMultiDay = days.length > 1;
@@ -57,6 +75,23 @@ export function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => { /* swallow */ }}>
           <ScrollView contentContainerStyle={styles.body}>
+            {localPhotos.length > 0 ? (
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                style={styles.carousel}
+              >
+                {localPhotos.map((p) => (
+                  <Image
+                    key={p.id}
+                    source={{ uri: absUrl(p.url) }}
+                    style={styles.carouselImage}
+                    resizeMode="cover"
+                  />
+                ))}
+              </ScrollView>
+            ) : null}
             <Text style={styles.title}>{sale.title}</Text>
             <Text style={styles.address}>{sale.address}</Text>
             {when || hours ? (
@@ -94,12 +129,27 @@ export function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
             >
               <Text style={styles.buttonText}>Get directions</Text>
             </Pressable>
+            {isOwner ? (
+              <Pressable
+                onPress={() => setManaging(true)}
+                style={styles.manageBtn}
+              >
+                <Text style={styles.manageBtnText}>Manage Photos</Text>
+              </Pressable>
+            ) : null}
             <Pressable style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeText}>Close</Text>
             </Pressable>
           </ScrollView>
         </Pressable>
       </Pressable>
+      <ManagePhotosSheet
+        visible={managing}
+        saleId={sale.id}
+        photos={localPhotos}
+        onClose={() => setManaging(false)}
+        onChange={setLocalPhotos}
+      />
     </Modal>
   );
 }
@@ -159,4 +209,20 @@ const styles = StyleSheet.create({
     borderColor: "#bfdbfe",
   },
   tagText: { fontSize: 12, color: "#1d4ed8", fontWeight: "600", textTransform: "capitalize" },
+  carousel: { height: 240, marginBottom: 12 },
+  carouselImage: {
+    width: Dimensions.get("window").width - 24,
+    height: 240,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  manageBtn: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2563eb",
+    alignItems: "center",
+  },
+  manageBtnText: { color: "#2563eb", fontWeight: "600", fontSize: 14 },
 });

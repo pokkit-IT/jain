@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -18,6 +19,8 @@ from .services import (
     list_sales_for_owner,
     update_sale,
 )
+from .models import Sale, SalePhoto
+from .photos import delete_photo as _delete_photo, save_photo
 from .tags import CURATED_TAGS
 from .tools import plan_route_handler
 
@@ -43,8 +46,17 @@ class CreateSaleBody(BaseModel):
     days: list[DayHoursBody] = Field(default_factory=list)
 
 
+class SalePhotoOut(BaseModel):
+    id: str
+    position: int
+    content_type: str
+    url: str
+    thumb_url: str
+
+
 class SaleResponse(BaseModel):
     id: str
+    owner_id: str
     title: str
     address: str
     description: str | None
@@ -58,11 +70,14 @@ class SaleResponse(BaseModel):
     # Expanded per-day schedule (one entry per date in the range).
     # Always present; uses SaleDay overrides when set, defaults otherwise.
     days: list[DayHoursBody] = Field(default_factory=list)
+    photos: list[SalePhotoOut] = Field(default_factory=list)
 
     @classmethod
     def from_model(cls, sale) -> "SaleResponse":
+        photos_sorted = sorted(sale.photos or [], key=lambda p: p.position)
         return cls(
             id=sale.id,
+            owner_id=str(sale.owner_id),
             title=sale.title,
             address=sale.address,
             description=sale.description,
@@ -74,6 +89,16 @@ class SaleResponse(BaseModel):
             lng=sale.lng,
             tags=sale.tags,
             days=[DayHoursBody(**d) for d in expanded_days(sale)],
+            photos=[
+                SalePhotoOut(
+                    id=p.id,
+                    position=p.position,
+                    content_type=p.content_type,
+                    url=f"/uploads/{p.original_path}",
+                    thumb_url=f"/uploads/{p.thumb_path}",
+                )
+                for p in photos_sorted
+            ],
         )
 
 
@@ -201,6 +226,77 @@ async def delete_sale_route(
     if sale.owner_id != user.id:
         raise HTTPException(status_code=403, detail="not your sale")
     await delete_sale(db, sale)
+
+
+def _photo_to_json(photo: SalePhoto) -> dict:
+    return {
+        "id": photo.id,
+        "position": photo.position,
+        "content_type": photo.content_type,
+        "url": f"/uploads/{photo.original_path}",
+        "thumb_url": f"/uploads/{photo.thumb_path}",
+    }
+
+
+@router.post("/sales/{sale_id}/photos")
+async def upload_sale_photo(
+    sale_id: str,
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    sale = await get_sale_by_id(db, sale_id)
+    if sale is None:
+        raise HTTPException(status_code=404, detail="sale_not_found")
+    if sale.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="not_sale_owner")
+
+    photo = await save_photo(db, sale_id, file)
+    return _photo_to_json(photo)
+
+
+@router.delete("/sales/{sale_id}/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_sale_photo(
+    sale_id: str,
+    photo_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    sale = await db.get(Sale, sale_id)
+    if sale is None or sale.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="sale_not_found")
+    photo = await db.get(SalePhoto, photo_id)
+    if photo is None or photo.sale_id != sale_id:
+        raise HTTPException(status_code=404, detail="photo_not_found")
+    await _delete_photo(db, photo)
+    return None
+
+
+class ReorderRequest(BaseModel):
+    photo_ids: list[str]
+
+
+@router.patch("/sales/{sale_id}/photos/reorder")
+async def reorder_sale_photos(
+    sale_id: str,
+    body: ReorderRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    sale = await db.get(Sale, sale_id)
+    if sale is None or sale.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="sale_not_found")
+
+    res = await db.execute(select(SalePhoto).where(SalePhoto.sale_id == sale_id))
+    existing = {p.id: p for p in res.scalars().all()}
+    if set(existing.keys()) != set(body.photo_ids):
+        raise HTTPException(status_code=400, detail="photo_ids_mismatch")
+
+    for index, pid in enumerate(body.photo_ids):
+        existing[pid].position = index
+    await db.commit()
+
+    return [_photo_to_json(existing[pid]) for pid in body.photo_ids]
 
 
 class StartLocation(BaseModel):

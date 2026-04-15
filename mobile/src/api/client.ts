@@ -21,3 +21,16 @@ apiClient.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+export function absUrl(relative: string): string {
+  if (/^https?:\/\//.test(relative)) return relative;
+  const base = apiClient.defaults.baseURL ?? "";
+  // baseURL may or may not include /api — the server returns paths starting with /uploads/
+  // We want: <origin><relative>. Strip any path suffix from baseURL to get origin.
+  try {
+    const url = new URL(base);
+    return `${url.protocol}//${url.host}${relative}`;
+  } catch {
+    return `${base}${relative}`;
+  }
+}

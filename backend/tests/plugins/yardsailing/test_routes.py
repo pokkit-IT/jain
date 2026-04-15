@@ -1,13 +1,39 @@
+import io
 from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from PIL import Image
 
 from app.auth.jwt import sign_access_token
 from app.database import async_session, engine
 from app.main import create_app
 from app.models.base import Base
 from app.models.user import User
+
+
+_SALE_PAYLOAD = {
+    "title": "Photo Sale", "address": "1 Test St",
+    "start_date": "2026-04-18", "start_time": "08:00", "end_time": "14:00",
+    "description": None, "end_date": None,
+}
+
+
+async def _create_test_sale(client: AsyncClient, token: str) -> str:
+    resp = await client.post(
+        "/api/plugins/yardsailing/sales",
+        json=_SALE_PAYLOAD,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()["id"]
+
+
+def _make_jpeg_buf() -> io.BytesIO:
+    buf = io.BytesIO()
+    Image.new("RGB", (800, 600), (100, 200, 50)).save(buf, format="JPEG")
+    buf.seek(0)
+    return buf
 
 
 @pytest.fixture
@@ -295,6 +321,213 @@ async def test_get_my_sales_lists_own_rows(app_and_token):
     rows = resp.json()
     assert len(rows) == 1
     assert rows[0]["title"] == "One"
+
+
+@pytest.mark.asyncio
+async def test_upload_photo_endpoint_happy(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+
+    sale_id = await _create_test_sale(client, token)
+
+    resp = await client.post(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+        files={"file": ("x.jpg", _make_jpeg_buf(), "image/jpeg")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["position"] == 0
+    assert body["url"].startswith("/uploads/sales/")
+    assert body["thumb_url"].startswith("/uploads/sales/")
+    assert body["content_type"] == "image/jpeg"
+
+
+@pytest.mark.asyncio
+async def test_upload_photo_endpoint_non_owner_forbidden(app_and_two_tokens, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    app, token_a, token_b = app_and_two_tokens
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # User A creates a sale
+        sale_id = await _create_test_sale(client, token_a)
+
+        # User B tries to upload to it
+        resp = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("x.jpg", _make_jpeg_buf(), "image/jpeg")},
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_delete_photo_endpoint(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+
+    sale_id = await _create_test_sale(client, token)
+    buf = _make_jpeg_buf()
+
+    up = await client.post(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+        files={"file": ("x.jpg", buf, "image/jpeg")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert up.status_code == 200
+    photo = up.json()
+
+    orig_abs = tmp_path / photo["url"].removeprefix("/uploads/")
+    thumb_abs = tmp_path / photo["thumb_url"].removeprefix("/uploads/")
+    assert orig_abs.exists() and thumb_abs.exists()
+
+    resp = await client.delete(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos/{photo['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 204
+    assert not orig_abs.exists()
+    assert not thumb_abs.exists()
+
+
+@pytest.mark.asyncio
+async def test_reorder_photos_endpoint(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+
+    sale_id = await _create_test_sale(client, token)
+
+    ids: list[str] = []
+    for _ in range(3):
+        buf = _make_jpeg_buf()
+        r = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("p.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        ids.append(r.json()["id"])
+
+    reversed_ids = list(reversed(ids))
+    resp = await client.patch(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos/reorder",
+        json={"photo_ids": reversed_ids},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert [p["id"] for p in body] == reversed_ids
+    assert [p["position"] for p in body] == [0, 1, 2]
+
+
+@pytest.mark.asyncio
+async def test_reorder_rejects_mismatched_ids(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+
+    sale_id = await _create_test_sale(client, token)
+
+    ids: list[str] = []
+    for _ in range(3):
+        buf = _make_jpeg_buf()
+        r = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("p.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        ids.append(r.json()["id"])
+
+    resp = await client.patch(
+        f"/api/plugins/yardsailing/sales/{sale_id}/photos/reorder",
+        json={"photo_ids": ids[:2]},  # missing one
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_delete_photo_non_owner_forbidden(app_and_two_tokens, tmp_path, monkeypatch):
+    from httpx import ASGITransport as _ASGITransport
+
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    app, token_a, token_b = app_and_two_tokens
+
+    async with AsyncClient(
+        transport=_ASGITransport(app=app), base_url="http://test"
+    ) as client_a:
+        sale_id = await _create_test_sale(client_a, token_a)
+        buf = _make_jpeg_buf()
+        up = await client_a.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("x.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token_a}"},
+        )
+        photo = up.json()
+
+    async with AsyncClient(
+        transport=_ASGITransport(app=app), base_url="http://test"
+    ) as client_b:
+        resp = await client_b.delete(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos/{photo['id']}",
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+    assert resp.status_code in (403, 404)
+
+
+@pytest.mark.asyncio
+async def test_list_sales_includes_ordered_photos(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+    sale_id = await _create_test_sale(client, token)
+
+    ids: list[str] = []
+    for _ in range(3):
+        buf = _make_jpeg_buf()
+        r = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("p.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        ids.append(r.json()["id"])
+
+    resp = await client.get(
+        "/api/plugins/yardsailing/sales",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    payload = resp.json()
+    sales = payload if isinstance(payload, list) else payload.get("sales", [])
+    target = next(s for s in sales if s["id"] == sale_id)
+    assert "photos" in target
+    assert [p["id"] for p in target["photos"]] == ids
+    assert target["photos"][0]["position"] == 0
+    assert all("thumb_url" in p and "url" in p for p in target["photos"])
+
+
+@pytest.mark.asyncio
+async def test_get_sale_detail_includes_photos(app_and_token, tmp_path, monkeypatch):
+    monkeypatch.setattr("app.plugins.yardsailing.photos.UPLOADS_ROOT", tmp_path)
+    client, token = app_and_token
+    sale_id = await _create_test_sale(client, token)
+
+    ids: list[str] = []
+    for _ in range(2):
+        buf = _make_jpeg_buf()
+        r = await client.post(
+            f"/api/plugins/yardsailing/sales/{sale_id}/photos",
+            files={"file": ("p.jpg", buf, "image/jpeg")},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        ids.append(r.json()["id"])
+
+    resp = await client.get(f"/api/plugins/yardsailing/sales/{sale_id}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "photos" in body
+    assert [p["id"] for p in body["photos"]] == ids
+    assert body["photos"][0]["position"] == 0
+    assert all("thumb_url" in p and "url" in p for p in body["photos"])
 
 
 async def test_plan_route_endpoint_returns_ordered_stops(

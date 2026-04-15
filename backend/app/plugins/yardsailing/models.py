@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text, Uuid, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -49,6 +49,12 @@ class Sale(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
         order_by="SaleDay.day_date",
+    )
+    photos: Mapped[list["SalePhoto"]] = relationship(
+        "SalePhoto",
+        cascade="all, delete-orphan",
+        order_by="SalePhoto.position",
+        lazy="selectin",
     )
 
     @property
@@ -104,3 +110,28 @@ class SaleDay(Base):
     end_time: Mapped[str] = mapped_column(String(5), nullable=False)
 
     sale: Mapped[Sale] = relationship(back_populates="day_rows")
+
+
+class SalePhoto(Base):
+    """A photo attached to a Sale.
+
+    Ordered by `position` for deterministic display order. Cascade-deleted
+    when the parent Sale is removed.
+    """
+
+    __tablename__ = "yardsailing_sale_photos"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    sale_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("yardsailing_sales.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    original_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    thumb_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+    )

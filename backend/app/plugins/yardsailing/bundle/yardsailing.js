@@ -303,39 +303,61 @@
         },
         /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: [styles.tagText, active && styles.tagTextActive] }, tag)
       );
-    })), picker ? /* @__PURE__ */ import_react.default.createElement(
-      import_react_native.View,
-      {
-        style: import_react_native.Platform.OS === "ios" ? [
-          styles.iosPickerBox,
-          picker.kind === "date" && { height: 380 }
-        ] : void 0
-      },
-      import_react_native.Platform.OS === "ios" ? /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.iosPickerHeader }, /* @__PURE__ */ import_react.default.createElement(import_react_native.TouchableOpacity, { onPress: () => setPicker(null) }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.iosPickerDone }, "Done"))) : null,
-      /* @__PURE__ */ import_react.default.createElement(
+    })), picker ? (() => {
+      const pickerValue = (() => {
+        var _a, _b;
+        if (picker.kind === "date") {
+          const iso = data[picker.field] || data.start_date;
+          return parseIsoDate(iso);
+        }
+        if ("dayDate" in picker) {
+          const row = data.days.find((x) => x.day_date === picker.dayDate);
+          const hhmm = (picker.which === "start" ? (_a = row == null ? void 0 : row.start_time) != null ? _a : data.start_time : (_b = row == null ? void 0 : row.end_time) != null ? _b : data.end_time) || "09:00";
+          return parseHHMM(hhmm);
+        }
+        return parseHHMM(data[picker.field] || "09:00");
+      })();
+      if (import_react_native.Platform.OS === "ios") {
+        return /* @__PURE__ */ import_react.default.createElement(
+          import_react_native.Modal,
+          {
+            transparent: true,
+            animationType: "fade",
+            visible: !!picker,
+            onRequestClose: () => setPicker(null)
+          },
+          /* @__PURE__ */ import_react.default.createElement(
+            import_react_native.Pressable,
+            {
+              style: styles.modalBackdrop,
+              onPress: () => setPicker(null)
+            },
+            /* @__PURE__ */ import_react.default.createElement(import_react_native.Pressable, { style: styles.modalCard, onPress: () => {
+            } }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.iosPickerHeader }, /* @__PURE__ */ import_react.default.createElement(import_react_native.TouchableOpacity, { onPress: () => setPicker(null) }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.iosPickerDone }, "Done"))), /* @__PURE__ */ import_react.default.createElement(
+              import_datetimepicker.default,
+              {
+                mode: picker.kind,
+                value: pickerValue,
+                onChange: onPickerChange,
+                is24Hour: false,
+                display: picker.kind === "date" ? "inline" : "spinner",
+                style: picker.kind === "date" ? { height: 360, alignSelf: "stretch" } : void 0
+              }
+            ))
+          )
+        );
+      }
+      return /* @__PURE__ */ import_react.default.createElement(
         import_datetimepicker.default,
         {
           mode: picker.kind,
-          value: (() => {
-            var _a, _b;
-            if (picker.kind === "date") {
-              const iso = data[picker.field] || data.start_date;
-              return parseIsoDate(iso);
-            }
-            if ("dayDate" in picker) {
-              const row = data.days.find((x) => x.day_date === picker.dayDate);
-              const hhmm = (picker.which === "start" ? (_a = row == null ? void 0 : row.start_time) != null ? _a : data.start_time : (_b = row == null ? void 0 : row.end_time) != null ? _b : data.end_time) || "09:00";
-              return parseHHMM(hhmm);
-            }
-            return parseHHMM(data[picker.field] || "09:00");
-          })(),
+          value: pickerValue,
           onChange: onPickerChange,
           is24Hour: false,
-          style: import_react_native.Platform.OS === "ios" && picker.kind === "date" ? { height: 360, alignSelf: "stretch" } : void 0,
-          display: import_react_native.Platform.OS === "ios" ? picker.kind === "date" ? "inline" : "spinner" : "default"
+          display: "default"
         }
-      )
-    ) : null, /* @__PURE__ */ import_react.default.createElement(
+      );
+    })() : null, /* @__PURE__ */ import_react.default.createElement(
       import_react_native.TouchableOpacity,
       {
         style: [styles.button, submitting && styles.buttonDisabled],
@@ -430,6 +452,18 @@
       backgroundColor: "#fff"
     },
     iosPickerDone: { color: "#2563eb", fontWeight: "700", fontSize: 15 },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      paddingHorizontal: 16
+    },
+    modalCard: {
+      backgroundColor: "#fff",
+      borderRadius: 14,
+      overflow: "hidden",
+      paddingBottom: 8
+    },
     dayRow: {
       flexDirection: "row",
       alignItems: "center",

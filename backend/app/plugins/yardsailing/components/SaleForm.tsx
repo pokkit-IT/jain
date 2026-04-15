@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Modal,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
@@ -378,57 +379,68 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
         })}
       </View>
 
-      {picker ? (
-        <View
-          style={
-            Platform.OS === "ios"
-              ? [
-                  styles.iosPickerBox,
-                  picker.kind === "date" && { height: 380 },
-                ]
-              : undefined
+      {picker ? (() => {
+        const pickerValue = (() => {
+          if (picker.kind === "date") {
+            const iso = data[picker.field] || data.start_date;
+            return parseIsoDate(iso);
           }
-        >
-          {Platform.OS === "ios" ? (
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => setPicker(null)}>
-                <Text style={styles.iosPickerDone}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
+          if ("dayDate" in picker) {
+            const row = data.days.find((x) => x.day_date === picker.dayDate);
+            const hhmm = (picker.which === "start"
+              ? (row?.start_time ?? data.start_time)
+              : (row?.end_time ?? data.end_time)) || "09:00";
+            return parseHHMM(hhmm);
+          }
+          return parseHHMM(data[picker.field] || "09:00");
+        })();
+
+        if (Platform.OS === "ios") {
+          return (
+            <Modal
+              transparent
+              animationType="fade"
+              visible={!!picker}
+              onRequestClose={() => setPicker(null)}
+            >
+              <Pressable
+                style={styles.modalBackdrop}
+                onPress={() => setPicker(null)}
+              >
+                <Pressable style={styles.modalCard} onPress={() => {}}>
+                  <View style={styles.iosPickerHeader}>
+                    <TouchableOpacity onPress={() => setPicker(null)}>
+                      <Text style={styles.iosPickerDone}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    mode={picker.kind}
+                    value={pickerValue}
+                    onChange={onPickerChange}
+                    is24Hour={false}
+                    display={picker.kind === "date" ? "inline" : "spinner"}
+                    style={
+                      picker.kind === "date"
+                        ? { height: 360, alignSelf: "stretch" }
+                        : undefined
+                    }
+                  />
+                </Pressable>
+              </Pressable>
+            </Modal>
+          );
+        }
+
+        return (
           <DateTimePicker
             mode={picker.kind}
-            value={(() => {
-              if (picker.kind === "date") {
-                const iso = data[picker.field] || data.start_date;
-                return parseIsoDate(iso);
-              }
-              if ("dayDate" in picker) {
-                const row = data.days.find((x) => x.day_date === picker.dayDate);
-                const hhmm = (picker.which === "start"
-                  ? (row?.start_time ?? data.start_time)
-                  : (row?.end_time ?? data.end_time)) || "09:00";
-                return parseHHMM(hhmm);
-              }
-              return parseHHMM(data[picker.field] || "09:00");
-            })()}
+            value={pickerValue}
             onChange={onPickerChange}
             is24Hour={false}
-            style={
-              Platform.OS === "ios" && picker.kind === "date"
-                ? { height: 360, alignSelf: "stretch" }
-                : undefined
-            }
-            display={
-              Platform.OS === "ios"
-                ? picker.kind === "date"
-                  ? "inline"
-                  : "spinner"
-                : "default"
-            }
+            display="default"
           />
-        </View>
-      ) : null}
+        );
+      })() : null}
 
       <TouchableOpacity
         style={[styles.button, submitting && styles.buttonDisabled]}
@@ -528,6 +540,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   iosPickerDone: { color: "#2563eb", fontWeight: "700", fontSize: 15 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    overflow: "hidden",
+    paddingBottom: 8,
+  },
   dayRow: {
     flexDirection: "row",
     alignItems: "center",

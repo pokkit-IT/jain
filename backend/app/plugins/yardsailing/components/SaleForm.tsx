@@ -379,7 +379,16 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
       </View>
 
       {picker ? (
-        <View style={Platform.OS === "ios" ? styles.iosPickerBox : undefined}>
+        <View
+          style={
+            Platform.OS === "ios"
+              ? [
+                  styles.iosPickerBox,
+                  picker.kind === "date" && { height: 380 },
+                ]
+              : undefined
+          }
+        >
           {Platform.OS === "ios" ? (
             <View style={styles.iosPickerHeader}>
               <TouchableOpacity onPress={() => setPicker(null)}>
@@ -405,7 +414,18 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
             })()}
             onChange={onPickerChange}
             is24Hour={false}
-            display={Platform.OS === "ios" ? "spinner" : "default"}
+            style={
+              Platform.OS === "ios" && picker.kind === "date"
+                ? { height: 360, alignSelf: "stretch" }
+                : undefined
+            }
+            display={
+              Platform.OS === "ios"
+                ? picker.kind === "date"
+                  ? "inline"
+                  : "spinner"
+                : "default"
+            }
           />
         </View>
       ) : null}

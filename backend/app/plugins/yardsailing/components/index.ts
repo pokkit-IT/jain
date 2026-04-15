@@ -1,4 +1,5 @@
 import { SaleForm } from "./SaleForm";
+import { YardsailingHome } from "./YardsailingHome";
 
 // Register on global namespace for PluginHost to pick up
 declare const globalThis: {
@@ -8,6 +9,7 @@ declare const globalThis: {
 globalThis.JainPlugins = globalThis.JainPlugins || {};
 globalThis.JainPlugins.yardsailing = {
   SaleForm,
+  YardsailingHome,
 };
 
-export { SaleForm };
+export { SaleForm, YardsailingHome };

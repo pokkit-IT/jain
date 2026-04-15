@@ -43,6 +43,14 @@ export async function postSighting(
   return data;
 }
 
+export async function fetchGroups(query: string = ""): Promise<SaleGroupSummary[]> {
+  const url = query
+    ? `/api/plugins/yardsailing/groups?q=${encodeURIComponent(query)}`
+    : "/api/plugins/yardsailing/groups";
+  const res = await apiClient.get<SaleGroupSummary[]>(url);
+  return res.data;
+}
+
 export async function fetchCuratedTags(): Promise<string[]> {
   const res = await apiClient.get<{ tags: string[] }>("/api/plugins/yardsailing/tags");
   return res.data.tags;

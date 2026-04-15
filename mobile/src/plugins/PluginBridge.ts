@@ -4,6 +4,7 @@ import { useAppStore } from "../store/useAppStore";
 export interface PluginBridge {
   callPluginApi: (path: string, method: string, body?: unknown) => Promise<unknown>;
   closeComponent: () => void;
+  openComponent: (name: string, props?: Record<string, unknown>) => void;
   showToast: (msg: string) => void;
 }
 
@@ -26,6 +27,9 @@ export function makeBridgeForPlugin(pluginName: string): PluginBridge {
     },
     closeComponent() {
       useAppStore.getState().hideComponent();
+    },
+    openComponent(name, props) {
+      useAppStore.getState().showComponent(pluginName, name, props);
     },
     showToast(msg) {
       // Best-effort inline toast via window.alert on web. Native toast

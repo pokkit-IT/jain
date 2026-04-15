@@ -18,6 +18,10 @@ Tag your sales with categories (Furniture, Toys, Tools, Baby Items, Clothing, Bo
 
 You can also ask Jain in plain English: *"find yard sales near me with baby items"* or *"what's happening right now?"* — the LLM knows the tag vocabulary and routes the search correctly.
 
+## Spot an unlisted sale?
+
+Long-press anywhere on the **Map** to drop a pin at an unlisted yard sale you've spotted. The pin shows as **Unconfirmed** (orange) until someone else drops a pin within 50 m of it — then it flips to **Confirmed** (green). Unconfirmed pins disappear after 2 hours; confirmed pins last until end of day. Drops are disabled after 5 PM (too late to be useful). Sightings can't be edited; they're just a heads-up to other hunters.
+
 ## Tips
 
 - **Be specific with addresses** — "1816 W Eseco Rd, Cushing, OK" geocodes better than "my place."

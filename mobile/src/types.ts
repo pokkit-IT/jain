@@ -59,6 +59,8 @@ export interface Sale {
   tags?: string[];
   days?: DayHours[];
   photos?: SalePhoto[];
+  source?: "host" | "sighting";
+  confirmations?: number;
 }
 
 export interface JainUser {

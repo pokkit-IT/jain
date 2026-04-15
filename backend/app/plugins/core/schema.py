@@ -52,6 +52,18 @@ class PluginApi(BaseModel):
     base_url: str
 
 
+class PluginHome(BaseModel):
+    """Optional home-screen declaration. The mobile Skills tab renders
+    plugins that declare a home as tappable entries; tapping mounts
+    `component` from the plugin bundle via PluginHost.
+    """
+
+    component: str  # exported React component name
+    label: str  # user-facing label shown in the Skills list
+    icon: str | None = None  # optional icon hint (mapped client-side)
+    description: str | None = None  # one-line pitch; falls back to manifest.description
+
+
 class HelpExample(BaseModel):
     prompt: str  # tappable text sent to chat when the user picks it
     description: str = ""  # optional one-liner explaining what it does
@@ -68,3 +80,4 @@ class PluginManifest(BaseModel):
     api: PluginApi | None = None
     assets: list[str] = Field(default_factory=list)
     examples: list[HelpExample] = Field(default_factory=list)
+    home: PluginHome | None = None

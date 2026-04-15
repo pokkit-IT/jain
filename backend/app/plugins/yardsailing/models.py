@@ -1,7 +1,20 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, Uuid, func
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -10,6 +23,30 @@ from app.models.user import User
 
 def _sale_id() -> str:
     return str(uuid4())
+
+
+sale_group_memberships = Table(
+    "yardsailing_sale_group_memberships",
+    Base.metadata,
+    Column(
+        "sale_id",
+        String(36),
+        ForeignKey("yardsailing_sales.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "group_id",
+        String(36),
+        ForeignKey("yardsailing_sale_groups.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    ),
+)
 
 
 class Sale(Base):
@@ -55,6 +92,13 @@ class Sale(Base):
         cascade="all, delete-orphan",
         order_by="SalePhoto.position",
         lazy="selectin",
+    )
+    groups: Mapped[list["SaleGroup"]] = relationship(
+        "SaleGroup",
+        secondary=sale_group_memberships,
+        back_populates="sales",
+        lazy="selectin",
+        order_by="SaleGroup.name",
     )
 
     @property
@@ -134,4 +178,44 @@ class SalePhoto(Base):
     content_type: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+
+
+class SaleGroup(Base):
+    """A named grouping of sales (e.g. "100 Mile Yard Sale").
+
+    Optional date window constrains membership: if `start_date`/`end_date` are
+    set, a sale can only join when its own dates fall fully within the window.
+    Name uniqueness is case-insensitive (enforced in the service layer).
+    """
+
+    __tablename__ = "yardsailing_sale_groups"
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_yardsailing_sale_groups_slug"),
+        CheckConstraint(
+            "(start_date IS NULL AND end_date IS NULL) OR "
+            "(start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= end_date)",
+            name="ck_yardsailing_sale_groups_dates",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_sale_id)
+    name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    slug: Mapped[str] = mapped_column(String(140), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    start_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    end_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    created_by: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False, index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False,
+    )
+
+    creator: Mapped[User] = relationship()
+    sales: Mapped[list[Sale]] = relationship(
+        Sale,
+        secondary=sale_group_memberships,
+        back_populates="groups",
+        lazy="selectin",
     )

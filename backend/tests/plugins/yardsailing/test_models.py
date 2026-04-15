@@ -125,3 +125,93 @@ async def test_deleting_sale_cascades_photos(session_and_user):
 
     res = await session.execute(select(SalePhoto).where(SalePhoto.sale_id == sale_id))
     assert res.scalars().all() == []
+
+
+@pytest.mark.asyncio
+async def test_sale_group_persist_and_link(session_and_user):
+    from app.plugins.yardsailing.models import Sale, SaleGroup
+    from sqlalchemy import select
+    import uuid
+
+    session, user = session_and_user
+    sale = Sale(
+        id=str(uuid.uuid4()), owner_id=user.id,
+        title="t", address="a", description=None,
+        start_date="2026-05-02", end_date="2026-05-03",
+        start_time="08:00", end_time="17:00",
+        lat=0.0, lng=0.0,
+    )
+    group = SaleGroup(
+        name="100 Mile Yard Sale",
+        slug="100-mile-yard-sale",
+        start_date="2026-05-01",
+        end_date="2026-05-03",
+        created_by=user.id,
+    )
+    sale.groups.append(group)
+    session.add(sale)
+    await session.commit()
+
+    res = await session.execute(select(SaleGroup))
+    loaded = res.scalar_one()
+    assert loaded.name == "100 Mile Yard Sale"
+    assert len(loaded.sales) == 1
+    assert loaded.sales[0].id == sale.id
+
+
+@pytest.mark.asyncio
+async def test_sale_group_slug_unique(session_and_user):
+    from app.plugins.yardsailing.models import SaleGroup
+
+    session, user = session_and_user
+    session.add(SaleGroup(name="X", slug="x", created_by=user.id))
+    await session.commit()
+
+    session.add(SaleGroup(name="X2", slug="x", created_by=user.id))
+    with pytest.raises(Exception):
+        await session.commit()
+    await session.rollback()
+
+
+@pytest.mark.asyncio
+async def test_sale_group_date_window_both_or_neither(session_and_user):
+    from app.plugins.yardsailing.models import SaleGroup
+
+    session, user = session_and_user
+    session.add(SaleGroup(
+        name="Bad", slug="bad",
+        start_date="2026-05-01", end_date=None,
+        created_by=user.id,
+    ))
+    with pytest.raises(Exception):
+        await session.commit()
+    await session.rollback()
+
+
+@pytest.mark.asyncio
+async def test_sale_group_membership_cascade_on_sale_delete(session_and_user):
+    from app.plugins.yardsailing.models import Sale, SaleGroup, sale_group_memberships
+    from sqlalchemy import select
+    import uuid
+
+    session, user = session_and_user
+    sale = Sale(
+        id=str(uuid.uuid4()), owner_id=user.id,
+        title="t", address="a", description=None,
+        start_date="2026-05-02", end_date="2026-05-03",
+        start_time="08:00", end_time="17:00",
+        lat=0.0, lng=0.0,
+    )
+    group = SaleGroup(name="G", slug="g", created_by=user.id)
+    sale.groups.append(group)
+    session.add(sale)
+    await session.commit()
+
+    await session.delete(sale)
+    await session.commit()
+
+    res = await session.execute(select(sale_group_memberships))
+    assert res.all() == []
+    # Group itself should survive
+    res = await session.execute(select(SaleGroup))
+    assert res.scalar_one().id == group.id

@@ -164,6 +164,11 @@
       }
     };
     const onPickerChange = (event, selected) => {
+      console.log("[SaleForm] picker onChange", {
+        type: event == null ? void 0 : event.type,
+        selected: selected == null ? void 0 : selected.toISOString(),
+        target: picker
+      });
       const target = picker;
       if (!target) return;
       if (import_react_native.Platform.OS === "android") {
@@ -326,25 +331,23 @@
             visible: !!picker,
             onRequestClose: () => setPicker(null)
           },
-          /* @__PURE__ */ import_react.default.createElement(
+          /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.modalBackdrop }, /* @__PURE__ */ import_react.default.createElement(
             import_react_native.Pressable,
             {
-              style: styles.modalBackdrop,
+              style: import_react_native.StyleSheet.absoluteFill,
               onPress: () => setPicker(null)
-            },
-            /* @__PURE__ */ import_react.default.createElement(import_react_native.Pressable, { style: styles.modalCard, onPress: () => {
-            } }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.iosPickerHeader }, /* @__PURE__ */ import_react.default.createElement(import_react_native.TouchableOpacity, { onPress: () => setPicker(null) }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.iosPickerDone }, "Done"))), /* @__PURE__ */ import_react.default.createElement(
-              import_datetimepicker.default,
-              {
-                mode: picker.kind,
-                value: pickerValue,
-                onChange: onPickerChange,
-                is24Hour: false,
-                display: picker.kind === "date" ? "inline" : "spinner",
-                style: picker.kind === "date" ? { height: 360, alignSelf: "stretch" } : void 0
-              }
-            ))
-          )
+            }
+          ), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.modalCard }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.iosPickerHeader }, /* @__PURE__ */ import_react.default.createElement(import_react_native.TouchableOpacity, { onPress: () => setPicker(null) }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.iosPickerDone }, "Done"))), /* @__PURE__ */ import_react.default.createElement(
+            import_datetimepicker.default,
+            {
+              mode: picker.kind,
+              value: pickerValue,
+              onChange: onPickerChange,
+              is24Hour: false,
+              display: picker.kind === "date" ? "inline" : "spinner",
+              style: picker.kind === "date" ? { height: 360, alignSelf: "stretch" } : void 0
+            }
+          )))
         );
       }
       return /* @__PURE__ */ import_react.default.createElement(

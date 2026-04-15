@@ -157,6 +157,12 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
   };
 
   const onPickerChange = (event: any, selected?: Date) => {
+    // eslint-disable-next-line no-console
+    console.log("[SaleForm] picker onChange", {
+      type: event?.type,
+      selected: selected?.toISOString(),
+      target: picker,
+    });
     const target = picker;
     if (!target) return;
     // Android: single confirm/dismiss event, close the picker after.
@@ -403,11 +409,12 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
               visible={!!picker}
               onRequestClose={() => setPicker(null)}
             >
-              <Pressable
-                style={styles.modalBackdrop}
-                onPress={() => setPicker(null)}
-              >
-                <Pressable style={styles.modalCard} onPress={() => {}}>
+              <View style={styles.modalBackdrop}>
+                <Pressable
+                  style={StyleSheet.absoluteFill}
+                  onPress={() => setPicker(null)}
+                />
+                <View style={styles.modalCard}>
                   <View style={styles.iosPickerHeader}>
                     <TouchableOpacity onPress={() => setPicker(null)}>
                       <Text style={styles.iosPickerDone}>Done</Text>
@@ -425,8 +432,8 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
                         : undefined
                     }
                   />
-                </Pressable>
-              </Pressable>
+                </View>
+              </View>
             </Modal>
           );
         }

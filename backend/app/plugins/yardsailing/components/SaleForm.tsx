@@ -69,6 +69,14 @@ export interface DayHours {
   end_time: string;
 }
 
+export interface SaleGroup {
+  id: string;
+  name: string;
+  slug: string;
+  start_date: string | null;
+  end_date: string | null;
+}
+
 export interface SaleFormData {
   title: string;
   description: string;
@@ -79,6 +87,7 @@ export interface SaleFormData {
   end_time: string;
   tags: string[];
   days: DayHours[];
+  groups: SaleGroup[];
 }
 
 function datesInRange(startIso: string, endIso: string): string[] {
@@ -118,7 +127,16 @@ function makeEmpty(): SaleFormData {
     end_time: "17:00",
     tags: [],
     days: [],
+    groups: [],
   };
+}
+
+function groupAcceptsDates(
+  g: SaleGroup, startIso: string, endIso: string,
+): boolean {
+  if (!g.start_date || !g.end_date) return true;
+  const effEnd = endIso || startIso;
+  return g.start_date <= startIso && effEnd <= g.end_date;
 }
 
 export function SaleForm({ initialData, bridge }: SaleFormProps) {
@@ -130,6 +148,15 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
   const [perDayHours, setPerDayHours] = useState<boolean>(
     (initialData?.days?.length ?? 0) > 0,
   );
+  const [groupQuery, setGroupQuery] = useState<string>("");
+  const [groupResults, setGroupResults] = useState<SaleGroup[]>([]);
+  const [groupSearching, setGroupSearching] = useState<boolean>(false);
+  const [showCreateGroup, setShowCreateGroup] = useState<boolean>(false);
+  const [newGroup, setNewGroup] = useState<{
+    name: string; description: string;
+    start_date: string; end_date: string;
+  }>({ name: "", description: "", start_date: "", end_date: "" });
+  const [creatingGroup, setCreatingGroup] = useState<boolean>(false);
 
   useEffect(() => {
     // Pull the curated list from the server so the vocabulary stays in
@@ -142,6 +169,61 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
       })
       .catch(() => { /* keep fallback */ });
   }, [bridge]);
+
+  useEffect(() => {
+    const q = groupQuery.trim();
+    const handle = setTimeout(async () => {
+      setGroupSearching(true);
+      try {
+        const path = q
+          ? `/api/plugins/yardsailing/groups?q=${encodeURIComponent(q)}`
+          : "/api/plugins/yardsailing/groups";
+        const res = await bridge.callPluginApi(path, "GET", null);
+        if (Array.isArray(res)) setGroupResults(res as SaleGroup[]);
+      } catch {
+        setGroupResults([]);
+      } finally {
+        setGroupSearching(false);
+      }
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [groupQuery, bridge]);
+
+  const addGroup = (g: SaleGroup) => {
+    setData((d) => {
+      if (d.groups.some((x) => x.id === g.id)) return d;
+      return { ...d, groups: [...d.groups, g] };
+    });
+    setGroupQuery("");
+  };
+
+  const removeGroup = (id: string) => {
+    setData((d) => ({ ...d, groups: d.groups.filter((g) => g.id !== id) }));
+  };
+
+  const createAndAddGroup = async () => {
+    const name = newGroup.name.trim();
+    if (!name) return;
+    const body: Record<string, unknown> = { name };
+    if (newGroup.description.trim()) body.description = newGroup.description.trim();
+    if (newGroup.start_date && newGroup.end_date) {
+      body.start_date = newGroup.start_date;
+      body.end_date = newGroup.end_date;
+    }
+    setCreatingGroup(true);
+    try {
+      const res = await bridge.callPluginApi(
+        "/api/plugins/yardsailing/groups", "POST", body,
+      ) as SaleGroup;
+      addGroup(res);
+      setShowCreateGroup(false);
+      setNewGroup({ name: "", description: "", start_date: "", end_date: "" });
+    } catch (e) {
+      bridge.showToast((e as Error).message || "Failed to create group");
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
 
   const set = <K extends keyof SaleFormData>(key: K, value: SaleFormData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
@@ -241,6 +323,21 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
       const result = await bridge.callPluginApi("/api/plugins/yardsailing/sales", "POST", data);
       // eslint-disable-next-line no-console
       console.log("[SaleForm] bridge returned:", result);
+      const newSaleId = (result as { id?: string })?.id;
+      if (newSaleId && data.groups.length > 0) {
+        try {
+          await bridge.callPluginApi(
+            `/api/plugins/yardsailing/sales/${newSaleId}/groups`,
+            "POST",
+            { group_ids: data.groups.map((g) => g.id) },
+          );
+        } catch (e) {
+          bridge.showToast(
+            "Sale created, but couldn't attach groups: " +
+            ((e as Error).message || "unknown error"),
+          );
+        }
+      }
       setSuccess("Yard sale created!");
       bridge.showToast("Yard sale created!");
       // Give the user a beat to see the success message before closing
@@ -415,6 +512,149 @@ export function SaleForm({ initialData, bridge }: SaleFormProps) {
         })}
       </View>
 
+      <Text style={styles.label}>Groups</Text>
+      <Text style={styles.hint}>
+        Optional. Attach this sale to events like "100 Mile Yard Sale".
+      </Text>
+      {data.groups.length > 0 ? (
+        <View style={styles.tagRow}>
+          {data.groups.map((g) => {
+            const ok = groupAcceptsDates(g, data.start_date, data.end_date);
+            return (
+              <TouchableOpacity
+                key={g.id}
+                onPress={() => removeGroup(g.id)}
+                style={[
+                  styles.groupChip,
+                  ok ? styles.groupChipActive : styles.groupChipBad,
+                ]}
+              >
+                <Text style={styles.groupChipText}>
+                  {g.name} {ok ? "×" : "⚠"}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
+      <TextInput
+        style={styles.input}
+        value={groupQuery}
+        onChangeText={setGroupQuery}
+        placeholder="Find or create a group…"
+      />
+      {groupQuery.trim() !== "" ? (
+        <View style={styles.groupResults}>
+          {groupSearching ? (
+            <Text style={styles.hint}>Searching…</Text>
+          ) : null}
+          {groupResults
+            .filter((g) => !data.groups.some((s) => s.id === g.id))
+            .map((g) => {
+              const ok = groupAcceptsDates(g, data.start_date, data.end_date);
+              return (
+                <TouchableOpacity
+                  key={g.id}
+                  onPress={() => ok && addGroup(g)}
+                  disabled={!ok}
+                  style={[styles.groupRow, !ok && styles.groupRowDisabled]}
+                >
+                  <Text style={styles.groupRowName}>{g.name}</Text>
+                  {g.start_date && g.end_date ? (
+                    <Text style={styles.groupRowDates}>
+                      {g.start_date} – {g.end_date}
+                      {!ok ? "  (doesn't fit sale dates)" : ""}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          {!groupSearching &&
+          !groupResults.some(
+            (g) => g.name.toLowerCase() === groupQuery.trim().toLowerCase(),
+          ) ? (
+            <TouchableOpacity
+              style={styles.groupRow}
+              onPress={() => {
+                setNewGroup({
+                  name: groupQuery.trim(),
+                  description: "",
+                  start_date: "",
+                  end_date: "",
+                });
+                setShowCreateGroup(true);
+              }}
+            >
+              <Text style={styles.groupCreateText}>
+                + Create "{groupQuery.trim()}"
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showCreateGroup}
+        onRequestClose={() => setShowCreateGroup(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowCreateGroup(false)}
+          />
+          <View style={styles.modalCard}>
+            <View style={{ padding: 16 }}>
+              <Text style={styles.header}>New group</Text>
+              <Text style={styles.label}>Name *</Text>
+              <TextInput
+                style={styles.input}
+                value={newGroup.name}
+                onChangeText={(v) => setNewGroup((g) => ({ ...g, name: v }))}
+                placeholder="e.g. 100 Mile Yard Sale"
+              />
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                style={styles.input}
+                value={newGroup.description}
+                onChangeText={(v) => setNewGroup((g) => ({ ...g, description: v }))}
+                placeholder="Optional"
+              />
+              <View style={styles.row}>
+                <View style={styles.half}>
+                  <Text style={styles.label}>Start Date</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={newGroup.start_date}
+                    onChangeText={(v) => setNewGroup((g) => ({ ...g, start_date: v }))}
+                    placeholder="YYYY-MM-DD"
+                  />
+                </View>
+                <View style={styles.half}>
+                  <Text style={styles.label}>End Date</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={newGroup.end_date}
+                    onChangeText={(v) => setNewGroup((g) => ({ ...g, end_date: v }))}
+                    placeholder="YYYY-MM-DD"
+                  />
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[styles.button, creatingGroup && styles.buttonDisabled]}
+                onPress={createAndAddGroup}
+                disabled={creatingGroup}
+              >
+                <Text style={styles.buttonText}>
+                  {creatingGroup ? "Creating…" : "Create group"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {picker ? (() => {
         const pickerValue = (() => {
           if (picker.kind === "date") {
@@ -548,6 +788,39 @@ const styles = StyleSheet.create({
   tagChipActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
   tagText: { fontSize: 13, color: "#334155", fontWeight: "600" },
   tagTextActive: { color: "#fff" },
+  groupChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  groupChipActive: {
+    backgroundColor: "#2563eb",
+    borderColor: "#2563eb",
+  },
+  groupChipBad: {
+    backgroundColor: "#fef3c7",
+    borderColor: "#f59e0b",
+  },
+  groupChipText: { fontSize: 13, color: "#fff", fontWeight: "600" },
+  groupResults: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  groupRow: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  groupRowDisabled: { opacity: 0.5 },
+  groupRowName: { fontSize: 14, color: "#0f172a", fontWeight: "600" },
+  groupRowDates: { fontSize: 12, color: "#64748b", marginTop: 2 },
+  groupCreateText: { fontSize: 14, color: "#2563eb", fontWeight: "600" },
   hint: { fontSize: 12, color: "#64748b", marginBottom: 8 },
   pickerField: {
     borderWidth: 1,

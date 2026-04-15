@@ -137,8 +137,14 @@
       start_time: "08:00",
       end_time: "17:00",
       tags: [],
-      days: []
+      days: [],
+      groups: []
     };
+  }
+  function groupAcceptsDates(g, startIso, endIso) {
+    if (!g.start_date || !g.end_date) return true;
+    const effEnd = endIso || startIso;
+    return g.start_date <= startIso && effEnd <= g.end_date;
   }
   function SaleForm({ initialData, bridge }) {
     var _a, _b;
@@ -150,6 +156,12 @@
     const [perDayHours, setPerDayHours] = (0, import_react.useState)(
       ((_b = (_a = initialData == null ? void 0 : initialData.days) == null ? void 0 : _a.length) != null ? _b : 0) > 0
     );
+    const [groupQuery, setGroupQuery] = (0, import_react.useState)("");
+    const [groupResults, setGroupResults] = (0, import_react.useState)([]);
+    const [groupSearching, setGroupSearching] = (0, import_react.useState)(false);
+    const [showCreateGroup, setShowCreateGroup] = (0, import_react.useState)(false);
+    const [newGroup, setNewGroup] = (0, import_react.useState)({ name: "", description: "", start_date: "", end_date: "" });
+    const [creatingGroup, setCreatingGroup] = (0, import_react.useState)(false);
     (0, import_react.useEffect)(() => {
       bridge.callPluginApi("/api/plugins/yardsailing/tags", "GET", null).then((res) => {
         const tags = res == null ? void 0 : res.tags;
@@ -157,6 +169,57 @@
       }).catch(() => {
       });
     }, [bridge]);
+    (0, import_react.useEffect)(() => {
+      const q = groupQuery.trim();
+      const handle = setTimeout(() => __async(this, null, function* () {
+        setGroupSearching(true);
+        try {
+          const path = q ? `/api/plugins/yardsailing/groups?q=${encodeURIComponent(q)}` : "/api/plugins/yardsailing/groups";
+          const res = yield bridge.callPluginApi(path, "GET", null);
+          if (Array.isArray(res)) setGroupResults(res);
+        } catch (e) {
+          setGroupResults([]);
+        } finally {
+          setGroupSearching(false);
+        }
+      }), 250);
+      return () => clearTimeout(handle);
+    }, [groupQuery, bridge]);
+    const addGroup = (g) => {
+      setData((d) => {
+        if (d.groups.some((x) => x.id === g.id)) return d;
+        return __spreadProps(__spreadValues({}, d), { groups: [...d.groups, g] });
+      });
+      setGroupQuery("");
+    };
+    const removeGroup = (id) => {
+      setData((d) => __spreadProps(__spreadValues({}, d), { groups: d.groups.filter((g) => g.id !== id) }));
+    };
+    const createAndAddGroup = () => __async(this, null, function* () {
+      const name = newGroup.name.trim();
+      if (!name) return;
+      const body = { name };
+      if (newGroup.description.trim()) body.description = newGroup.description.trim();
+      if (newGroup.start_date && newGroup.end_date) {
+        body.start_date = newGroup.start_date;
+        body.end_date = newGroup.end_date;
+      }
+      setCreatingGroup(true);
+      try {
+        const res = yield bridge.callPluginApi(
+          "/api/plugins/yardsailing/groups",
+          "POST",
+          body
+        );
+        addGroup(res);
+        setShowCreateGroup(false);
+        setNewGroup({ name: "", description: "", start_date: "", end_date: "" });
+      } catch (e) {
+        bridge.showToast(e.message || "Failed to create group");
+      } finally {
+        setCreatingGroup(false);
+      }
+    });
     const set = (key, value) => setData((d) => __spreadProps(__spreadValues({}, d), { [key]: value }));
     const rangeDates = datesInRange(data.start_date, data.end_date);
     const multiDay = rangeDates.length > 1;
@@ -228,6 +291,20 @@
         console.log("[SaleForm] calling bridge.callPluginApi");
         const result = yield bridge.callPluginApi("/api/plugins/yardsailing/sales", "POST", data);
         console.log("[SaleForm] bridge returned:", result);
+        const newSaleId = result == null ? void 0 : result.id;
+        if (newSaleId && data.groups.length > 0) {
+          try {
+            yield bridge.callPluginApi(
+              `/api/plugins/yardsailing/sales/${newSaleId}/groups`,
+              "POST",
+              { group_ids: data.groups.map((g) => g.id) }
+            );
+          } catch (e) {
+            bridge.showToast(
+              "Sale created, but couldn't attach groups: " + (e.message || "unknown error")
+            );
+          }
+        }
         setSuccess("Yard sale created!");
         bridge.showToast("Yard sale created!");
         setTimeout(() => bridge.closeComponent(), 800);
@@ -335,7 +412,114 @@
         },
         /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: [styles.tagText, active && styles.tagTextActive] }, tag)
       );
-    })), picker ? (() => {
+    })), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Groups"), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.hint }, 'Optional. Attach this sale to events like "100 Mile Yard Sale".'), data.groups.length > 0 ? /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.tagRow }, data.groups.map((g) => {
+      const ok = groupAcceptsDates(g, data.start_date, data.end_date);
+      return /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TouchableOpacity,
+        {
+          key: g.id,
+          onPress: () => removeGroup(g.id),
+          style: [
+            styles.groupChip,
+            ok ? styles.groupChipActive : styles.groupChipBad
+          ]
+        },
+        /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.groupChipText }, g.name, " ", ok ? "\xD7" : "\u26A0")
+      );
+    })) : null, /* @__PURE__ */ import_react.default.createElement(
+      import_react_native.TextInput,
+      {
+        style: styles.input,
+        value: groupQuery,
+        onChangeText: setGroupQuery,
+        placeholder: "Find or create a group\u2026"
+      }
+    ), groupQuery.trim() !== "" ? /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.groupResults }, groupSearching ? /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.hint }, "Searching\u2026") : null, groupResults.filter((g) => !data.groups.some((s) => s.id === g.id)).map((g) => {
+      const ok = groupAcceptsDates(g, data.start_date, data.end_date);
+      return /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TouchableOpacity,
+        {
+          key: g.id,
+          onPress: () => ok && addGroup(g),
+          disabled: !ok,
+          style: [styles.groupRow, !ok && styles.groupRowDisabled]
+        },
+        /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.groupRowName }, g.name),
+        g.start_date && g.end_date ? /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.groupRowDates }, g.start_date, " \u2013 ", g.end_date, !ok ? "  (doesn't fit sale dates)" : "") : null
+      );
+    }), !groupSearching && !groupResults.some(
+      (g) => g.name.toLowerCase() === groupQuery.trim().toLowerCase()
+    ) ? /* @__PURE__ */ import_react.default.createElement(
+      import_react_native.TouchableOpacity,
+      {
+        style: styles.groupRow,
+        onPress: () => {
+          setNewGroup({
+            name: groupQuery.trim(),
+            description: "",
+            start_date: "",
+            end_date: ""
+          });
+          setShowCreateGroup(true);
+        }
+      },
+      /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.groupCreateText }, '+ Create "', groupQuery.trim(), '"')
+    ) : null) : null, /* @__PURE__ */ import_react.default.createElement(
+      import_react_native.Modal,
+      {
+        transparent: true,
+        animationType: "fade",
+        visible: showCreateGroup,
+        onRequestClose: () => setShowCreateGroup(false)
+      },
+      /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.modalBackdrop }, /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.Pressable,
+        {
+          style: import_react_native.StyleSheet.absoluteFill,
+          onPress: () => setShowCreateGroup(false)
+        }
+      ), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.modalCard }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: { padding: 16 } }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.header }, "New group"), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Name *"), /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TextInput,
+        {
+          style: styles.input,
+          value: newGroup.name,
+          onChangeText: (v) => setNewGroup((g) => __spreadProps(__spreadValues({}, g), { name: v })),
+          placeholder: "e.g. 100 Mile Yard Sale"
+        }
+      ), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Description"), /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TextInput,
+        {
+          style: styles.input,
+          value: newGroup.description,
+          onChangeText: (v) => setNewGroup((g) => __spreadProps(__spreadValues({}, g), { description: v })),
+          placeholder: "Optional"
+        }
+      ), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.row }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "Start Date"), /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TextInput,
+        {
+          style: styles.input,
+          value: newGroup.start_date,
+          onChangeText: (v) => setNewGroup((g) => __spreadProps(__spreadValues({}, g), { start_date: v })),
+          placeholder: "YYYY-MM-DD"
+        }
+      )), /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.half }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.label }, "End Date"), /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TextInput,
+        {
+          style: styles.input,
+          value: newGroup.end_date,
+          onChangeText: (v) => setNewGroup((g) => __spreadProps(__spreadValues({}, g), { end_date: v })),
+          placeholder: "YYYY-MM-DD"
+        }
+      ))), /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.TouchableOpacity,
+        {
+          style: [styles.button, creatingGroup && styles.buttonDisabled],
+          onPress: createAndAddGroup,
+          disabled: creatingGroup
+        },
+        /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.buttonText }, creatingGroup ? "Creating\u2026" : "Create group")
+      ))))
+    ), picker ? (() => {
       const pickerValue = (() => {
         var _a2, _b2;
         if (picker.kind === "date") {
@@ -453,6 +637,39 @@
     tagChipActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
     tagText: { fontSize: 13, color: "#334155", fontWeight: "600" },
     tagTextActive: { color: "#fff" },
+    groupChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+      borderWidth: 1,
+      marginRight: 6,
+      marginBottom: 6
+    },
+    groupChipActive: {
+      backgroundColor: "#2563eb",
+      borderColor: "#2563eb"
+    },
+    groupChipBad: {
+      backgroundColor: "#fef3c7",
+      borderColor: "#f59e0b"
+    },
+    groupChipText: { fontSize: 13, color: "#fff", fontWeight: "600" },
+    groupResults: {
+      marginTop: 4,
+      borderWidth: 1,
+      borderColor: "#e2e8f0",
+      borderRadius: 8,
+      backgroundColor: "#fff"
+    },
+    groupRow: {
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: "#f1f5f9"
+    },
+    groupRowDisabled: { opacity: 0.5 },
+    groupRowName: { fontSize: 14, color: "#0f172a", fontWeight: "600" },
+    groupRowDates: { fontSize: 12, color: "#64748b", marginTop: 2 },
+    groupCreateText: { fontSize: 14, color: "#2563eb", fontWeight: "600" },
     hint: { fontSize: 12, color: "#64748b", marginBottom: 8 },
     pickerField: {
       borderWidth: 1,

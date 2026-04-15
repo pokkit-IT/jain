@@ -71,6 +71,13 @@
   function timeToHHMM(d) {
     return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   }
+  function nextWeekdayIso(target, from) {
+    const d = from ? new Date(from) : /* @__PURE__ */ new Date();
+    d.setHours(0, 0, 0, 0);
+    const diff = (target - d.getDay() + 7) % 7;
+    d.setDate(d.getDate() + diff);
+    return dateToIso(d);
+  }
   function parseIsoDate(iso) {
     if (iso) {
       const d = /* @__PURE__ */ new Date(iso + "T00:00:00");
@@ -118,20 +125,24 @@
     }
     return out;
   }
-  var EMPTY = {
-    title: "",
-    description: "",
-    address: "",
-    start_date: "",
-    end_date: "",
-    start_time: "08:00",
-    end_time: "17:00",
-    tags: [],
-    days: []
-  };
+  function makeEmpty() {
+    const startIso = nextWeekdayIso(5);
+    const endIso = nextWeekdayIso(0, parseIsoDate(startIso));
+    return {
+      title: "",
+      description: "",
+      address: "",
+      start_date: startIso,
+      end_date: endIso,
+      start_time: "08:00",
+      end_time: "17:00",
+      tags: [],
+      days: []
+    };
+  }
   function SaleForm({ initialData, bridge }) {
     var _a, _b;
-    const [data, setData] = (0, import_react.useState)(__spreadValues(__spreadValues({}, EMPTY), initialData));
+    const [data, setData] = (0, import_react.useState)(__spreadValues(__spreadValues({}, makeEmpty()), initialData));
     const [submitting, setSubmitting] = (0, import_react.useState)(false);
     const [error, setError] = (0, import_react.useState)(null);
     const [success, setSuccess] = (0, import_react.useState)(null);

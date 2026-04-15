@@ -24,6 +24,14 @@ function timeToHHMM(d: Date): string {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+function nextWeekdayIso(target: number, from?: Date): string {
+  const d = from ? new Date(from) : new Date();
+  d.setHours(0, 0, 0, 0);
+  const diff = (target - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + diff);
+  return dateToIso(d);
+}
+
 function parseIsoDate(iso: string): Date {
   if (iso) {
     const d = new Date(iso + "T00:00:00");
@@ -97,20 +105,24 @@ export interface SaleFormProps {
   };
 }
 
-const EMPTY: SaleFormData = {
-  title: "",
-  description: "",
-  address: "",
-  start_date: "",
-  end_date: "",
-  start_time: "08:00",
-  end_time: "17:00",
-  tags: [],
-  days: [],
-};
+function makeEmpty(): SaleFormData {
+  const startIso = nextWeekdayIso(5);
+  const endIso = nextWeekdayIso(0, parseIsoDate(startIso));
+  return {
+    title: "",
+    description: "",
+    address: "",
+    start_date: startIso,
+    end_date: endIso,
+    start_time: "08:00",
+    end_time: "17:00",
+    tags: [],
+    days: [],
+  };
+}
 
 export function SaleForm({ initialData, bridge }: SaleFormProps) {
-  const [data, setData] = useState<SaleFormData>({ ...EMPTY, ...initialData });
+  const [data, setData] = useState<SaleFormData>({ ...makeEmpty(), ...initialData });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

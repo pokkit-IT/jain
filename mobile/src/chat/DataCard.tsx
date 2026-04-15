@@ -151,6 +151,15 @@ export function DataCard({ displayHint, data }: DataCardProps) {
                         ))}
                       </View>
                     ) : null}
+                    {sale.groups && sale.groups.length > 0 ? (
+                      <View style={styles.tagRow}>
+                        {sale.groups.slice(0, 3).map((g) => (
+                          <View key={g.id} style={styles.groupChip}>
+                            <Text style={styles.groupChipText}>{g.name}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
                   </View>
                 </View>
                 {!selectMode ? <Text style={styles.chev}>›</Text> : null}
@@ -257,6 +266,15 @@ const styles = StyleSheet.create({
     borderColor: "#bfdbfe",
   },
   tagText: { fontSize: 11, color: "#1d4ed8", fontWeight: "600", textTransform: "capitalize" },
+  groupChip: {
+    backgroundColor: "#ede9fe",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginRight: 4,
+    marginTop: 4,
+  },
+  groupChipText: { fontSize: 11, color: "#6d28d9", fontWeight: "600" },
   checkbox: {
     width: 22,
     height: 22,

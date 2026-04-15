@@ -20,7 +20,7 @@ import { SaleDetailsModal } from "../core/SaleDetailsModal";
 import { SightingPopup } from "../core/SightingPopup";
 import { useLocation } from "../hooks/useLocation";
 import { useAppStore } from "../store/useAppStore";
-import type { Sale } from "../types";
+import type { Sale, SaleGroupSummary } from "../types";
 
 function pad2(n: number) { return n < 10 ? `0${n}` : String(n); }
 function nowHHMM(): string {
@@ -40,6 +40,9 @@ export function MapScreen() {
   const [availableTags, setAvailableTags] = React.useState<string[]>([]);
   const [activeTags, setActiveTags] = React.useState<string[]>([]);
   const [happeningNow, setHappeningNow] = React.useState(false);
+  const [availableGroups, setAvailableGroups] = React.useState<SaleGroupSummary[]>([]);
+  const [activeGroup, setActiveGroup] = React.useState<SaleGroupSummary | null>(null);
+  const [groupSheetOpen, setGroupSheetOpen] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -47,6 +50,7 @@ export function MapScreen() {
       const fresh = await fetchRecentSales({
         tags: activeTags,
         happeningNow,
+        groupId: activeGroup?.id,
       });
       setSales(fresh);
     } catch (e) {
@@ -55,7 +59,7 @@ export function MapScreen() {
     } finally {
       setLoading(false);
     }
-  }, [setSales, activeTags, happeningNow]);
+  }, [setSales, activeTags, happeningNow, activeGroup]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -65,6 +69,7 @@ export function MapScreen() {
 
   React.useEffect(() => {
     fetchCuratedTags().then(setAvailableTags).catch(() => {});
+    fetchGroups().then(setAvailableGroups).catch(() => {});
   }, []);
 
   const toggleTag = (tag: string) => {
@@ -96,6 +101,11 @@ export function MapScreen() {
             onPress={() => setHappeningNow((v) => !v)}
             accent
           />
+          <Chip
+            label={activeGroup ? activeGroup.name : "Groups"}
+            active={!!activeGroup}
+            onPress={() => setGroupSheetOpen(true)}
+          />
           {availableTags.map((tag) => (
             <Chip
               key={tag}
@@ -105,12 +115,13 @@ export function MapScreen() {
             />
           ))}
         </ScrollView>
-        {(activeTags.length > 0 || happeningNow) ? (
+        {(activeTags.length > 0 || happeningNow || activeGroup) ? (
           <Pressable
             style={styles.clearBtn}
             onPress={() => {
               setActiveTags([]);
               setHappeningNow(false);
+              setActiveGroup(null);
             }}
           >
             <Text style={styles.clearText}>Clear</Text>

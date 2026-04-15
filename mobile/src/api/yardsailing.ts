@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Sale, SalePhoto } from "../types";
+import type { Sale, SaleGroupSummary, SalePhoto } from "../types";
 
 export interface SaleInput {
   title: string;
@@ -16,6 +16,7 @@ export interface RecentSalesFilter {
   tags?: string[];
   query?: string;
   happeningNow?: boolean;
+  groupId?: string;
 }
 
 export async function fetchRecentSales(filter: RecentSalesFilter = {}): Promise<Sale[]> {
@@ -23,6 +24,7 @@ export async function fetchRecentSales(filter: RecentSalesFilter = {}): Promise<
   (filter.tags ?? []).forEach((t) => params.append("tag", t));
   if (filter.query) params.set("q", filter.query);
   if (filter.happeningNow) params.set("happening_now", "1");
+  if (filter.groupId) params.set("group_id", filter.groupId);
   const qs = params.toString();
   const url = qs
     ? `/api/plugins/yardsailing/sales/recent?${qs}`

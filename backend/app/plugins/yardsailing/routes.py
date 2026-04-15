@@ -19,7 +19,17 @@ from .services import (
     list_sales_for_owner,
     update_sale,
 )
-from .models import Sale, SalePhoto
+from .groups import (
+    CreateGroupInput,
+    GroupDateMismatch,
+    GroupError,
+    GroupNameTaken,
+    create_group as _create_group,
+    get_group as _get_group,
+    search_groups as _search_groups,
+    set_sale_groups as _set_sale_groups,
+)
+from .models import Sale, SaleGroup, SalePhoto
 from .photos import delete_photo as _delete_photo, save_photo
 from .sightings import DropWindowClosed, drop_sighting as _drop_sighting
 from .tags import CURATED_TAGS
@@ -94,6 +104,7 @@ class SaleResponse(BaseModel):
             source=sale.source,
             confirmations=sale.confirmations,
             days=[DayHoursBody(**d) for d in expanded_days(sale)],
+            groups=[GroupSummary.from_model(g) for g in (sale.groups or [])],
             photos=[
                 SalePhotoOut(
                     id=p.id,
@@ -105,6 +116,38 @@ class SaleResponse(BaseModel):
                 for p in photos_sorted
             ],
         )
+
+
+class GroupSummary(BaseModel):
+    id: str
+    name: str
+    slug: str
+    start_date: str | None = None
+    end_date: str | None = None
+
+    @classmethod
+    def from_model(cls, g: SaleGroup) -> "GroupSummary":
+        return cls(
+            id=g.id, name=g.name, slug=g.slug,
+            start_date=g.start_date, end_date=g.end_date,
+        )
+
+
+class GroupDetailResponse(GroupSummary):
+    description: str | None = None
+    created_by: str
+    sales_count: int
+
+
+class CreateGroupBody(BaseModel):
+    name: str
+    description: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+
+
+class SetSaleGroupsBody(BaseModel):
+    group_ids: list[str] = Field(default_factory=list)
 
 
 class TagListResponse(BaseModel):
@@ -158,6 +201,7 @@ async def list_recent_sales_route(
     tag: list[str] = Query(default_factory=list),
     q: str | None = Query(default=None),
     happening_now: bool = Query(default=False),
+    group_id: str | None = Query(default=None),
 ) -> list[SaleResponse]:
     """Public: recent sales across users, for the map.
 
@@ -172,6 +216,7 @@ async def list_recent_sales_route(
         tags=tag or None,
         query=q,
         only_happening_now=happening_now,
+        group_id=group_id,
     )
     return [SaleResponse.from_model(s) for s in sales]
 

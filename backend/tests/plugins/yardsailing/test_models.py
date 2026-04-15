@@ -125,3 +125,26 @@ async def test_deleting_sale_cascades_photos(session_and_user):
 
     res = await session.execute(select(SalePhoto).where(SalePhoto.sale_id == sale_id))
     assert res.scalars().all() == []
+
+
+@pytest.mark.asyncio
+async def test_sale_defaults_source_and_confirmations(session_and_user):
+    from app.plugins.yardsailing.models import Sale
+    from sqlalchemy import select
+    import uuid
+
+    session, user = session_and_user
+    sale = Sale(
+        id=str(uuid.uuid4()), owner_id=user.id,
+        title="t", address="a", description=None,
+        start_date="2026-04-14", end_date=None,
+        start_time="08:00", end_time="12:00",
+        lat=0.0, lng=0.0,
+    )
+    session.add(sale)
+    await session.commit()
+
+    res = await session.execute(select(Sale).where(Sale.id == sale.id))
+    loaded = res.scalar_one()
+    assert loaded.source == "host"
+    assert loaded.confirmations == 1

@@ -21,6 +21,7 @@ from .services import (
 )
 from .models import Sale, SalePhoto
 from .photos import delete_photo as _delete_photo, save_photo
+from .sightings import DropWindowClosed, drop_sighting as _drop_sighting
 from .tags import CURATED_TAGS
 from .tools import plan_route_handler
 
@@ -71,6 +72,8 @@ class SaleResponse(BaseModel):
     # Always present; uses SaleDay overrides when set, defaults otherwise.
     days: list[DayHoursBody] = Field(default_factory=list)
     photos: list[SalePhotoOut] = Field(default_factory=list)
+    source: str = "host"
+    confirmations: int = 1
 
     @classmethod
     def from_model(cls, sale) -> "SaleResponse":
@@ -88,6 +91,8 @@ class SaleResponse(BaseModel):
             lat=sale.lat,
             lng=sale.lng,
             tags=sale.tags,
+            source=sale.source,
+            confirmations=sale.confirmations,
             days=[DayHoursBody(**d) for d in expanded_days(sale)],
             photos=[
                 SalePhotoOut(
@@ -330,3 +335,29 @@ async def plan_route_endpoint(
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
+
+
+class DropSightingBody(BaseModel):
+    lat: float = Field(ge=-90.0, le=90.0)
+    lng: float = Field(ge=-180.0, le=180.0)
+    now_hhmm: str = Field(pattern=r"^\d{2}:\d{2}$")
+
+
+@router.post(
+    "/sightings",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SaleResponse,
+)
+async def drop_sighting_route(
+    body: DropSightingBody,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SaleResponse:
+    from datetime import datetime
+    try:
+        sale = await _drop_sighting(
+            db, user, body.lat, body.lng, datetime.now(), body.now_hhmm,
+        )
+    except DropWindowClosed:
+        raise HTTPException(status_code=409, detail="drop_window_closed")
+    return SaleResponse.from_model(sale)

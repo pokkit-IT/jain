@@ -71,6 +71,8 @@ export function SkillsScreen() {
             }
           >
             <Ionicons
+              // Cast is safe: Ionicons accepts any glyph name and warns in dev if
+              // unknown. PluginHome.icon is a free-form string from plugin.json.
               name={(item.home.icon ?? "apps-outline") as React.ComponentProps<typeof Ionicons>["name"]}
               size={28}
               color="#475569"

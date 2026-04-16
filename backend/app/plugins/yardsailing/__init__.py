@@ -22,5 +22,5 @@ def register() -> PluginRegistration:
         router=router,
         tools=TOOLS,
         ui_bundle_path="bundle/yardsailing.js",
-        ui_components=["SaleForm"],
+        ui_components=["SaleForm", "YardsailingHome"],
     )

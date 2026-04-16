@@ -6,7 +6,7 @@ Find, create, and manage yard sales in your area.
 
 - **Find sales nearby.** Ask Jain what yard sales are happening close to you. Include a radius if you want ("within 5 miles"). Tap any card in the results to see full details and get directions.
 - **Create a sale.** Say "I want to create a yard sale" and Jain will open a form to fill in the title, address, date, and hours. Your address is automatically geocoded, so the pin shows up on the map as soon as you save.
-- **Manage your sales.** The **My Sales** tab lists everything you've posted. Pull to refresh. Tap **Delete** to remove a sale you no longer want listed.
+- **Manage your sales.** Open **Skills → Yardsailing** to see everything you've posted, create a new sale, or tap a sale to manage its photos. Pull to refresh.
 
 ## The Map tab
 

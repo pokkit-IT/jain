@@ -12,6 +12,7 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import {
   fetchCuratedTags,
+  fetchGroups,
   fetchRecentSales,
   postSighting,
 } from "../api/yardsailing";

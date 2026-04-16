@@ -16,6 +16,13 @@ export interface ChatResponse {
   choices: string[] | null;
 }
 
+export interface PluginHome {
+  component: string;
+  label: string;
+  icon?: string | null;
+  description?: string | null;
+}
+
 export interface PluginSummary {
   name: string;
   version: string;
@@ -23,6 +30,7 @@ export interface PluginSummary {
   skills: Array<{ name: string; description: string; components?: string[] }>;
   components?: { bundle: string; exports: string[] };
   api?: { base_url: string };
+  home?: PluginHome | null;
 }
 
 export interface LocationState {
@@ -61,6 +69,15 @@ export interface Sale {
   photos?: SalePhoto[];
   source?: "host" | "sighting";
   confirmations?: number;
+  groups?: SaleGroupSummary[];
+}
+
+export interface SaleGroupSummary {
+  id: string;
+  name: string;
+  slug: string;
+  start_date: string | null;
+  end_date: string | null;
 }
 
 export interface JainUser {

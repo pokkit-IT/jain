@@ -30,6 +30,16 @@ async def app_and_token_for_yardsailing():
         yield c, token
 
 
+async def test_list_plugins_exposes_home(app_and_token_for_yardsailing):
+    client, _ = app_and_token_for_yardsailing
+    resp = await client.get("/api/plugins")
+    assert resp.status_code == 200
+    ys = next(p for p in resp.json()["plugins"] if p["name"] == "yardsailing")
+    assert ys["home"]["component"] == "YardsailingHome"
+    assert ys["home"]["label"] == "Yardsailing"
+    assert ys["home"]["icon"] == "storefront-outline"
+
+
 async def test_plugin_call_dispatches_internal_with_auth(app_and_token_for_yardsailing):
     client, token = app_and_token_for_yardsailing
     resp = await client.post(

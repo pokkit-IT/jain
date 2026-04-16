@@ -758,9 +758,151 @@
     dayDash: { color: "#94a3b8", fontSize: 14 }
   });
 
+  // components/YardsailingHome.tsx
+  var import_react2 = __toESM(__require("react"), 1);
+  var import_react_native2 = __require("react-native");
+  function YardsailingHome({ bridge }) {
+    const [sales, setSales] = (0, import_react2.useState)([]);
+    const [loading, setLoading] = (0, import_react2.useState)(true);
+    const [refreshing, setRefreshing] = (0, import_react2.useState)(false);
+    const [error, setError] = (0, import_react2.useState)(null);
+    const load = () => __async(this, null, function* () {
+      setError(null);
+      try {
+        const res = yield bridge.callPluginApi(
+          "/api/plugins/yardsailing/sales",
+          "GET",
+          null
+        );
+        setSales(Array.isArray(res) ? res : []);
+      } catch (e) {
+        setError(e.message || "Failed to load your sales.");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    });
+    (0, import_react2.useEffect)(() => {
+      load();
+    }, []);
+    const onRefresh = () => {
+      setRefreshing(true);
+      load();
+    };
+    const confirmDelete = (sale) => {
+      import_react_native2.Alert.alert(
+        "Delete sale?",
+        `"${sale.title}" will be removed. This can't be undone.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => __async(this, null, function* () {
+              try {
+                yield bridge.callPluginApi(
+                  `/api/plugins/yardsailing/sales/${sale.id}`,
+                  "DELETE",
+                  null
+                );
+                setSales((prev) => prev.filter((s) => s.id !== sale.id));
+                bridge.showToast("Sale deleted.");
+              } catch (e) {
+                import_react_native2.Alert.alert("Delete failed", e.message);
+              }
+            })
+          }
+        ]
+      );
+    };
+    const openCreate = () => {
+      if (bridge.openComponent) {
+        bridge.openComponent("SaleForm");
+      } else {
+        bridge.showToast("Ask Jain to create a yard sale from the Chat tab.");
+      }
+    };
+    return /* @__PURE__ */ import_react2.default.createElement(import_react_native2.View, { style: styles2.container }, /* @__PURE__ */ import_react2.default.createElement(import_react_native2.View, { style: styles2.intro }, /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Text, { style: styles2.heading }, "Yardsailing"), /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Text, { style: styles2.blurb }, "Find yard sales on the Map, drop a pin on one you've spotted, or post your own."), /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Pressable, { style: styles2.createBtn, onPress: openCreate }, /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Text, { style: styles2.createBtnText }, "+ Create yard sale"))), /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Text, { style: styles2.sectionTitle }, "My sales"), loading ? /* @__PURE__ */ import_react2.default.createElement(import_react_native2.View, { style: styles2.empty }, /* @__PURE__ */ import_react2.default.createElement(import_react_native2.ActivityIndicator, null)) : /* @__PURE__ */ import_react2.default.createElement(
+      import_react_native2.FlatList,
+      {
+        data: sales,
+        keyExtractor: (s) => s.id,
+        refreshControl: /* @__PURE__ */ import_react2.default.createElement(import_react_native2.RefreshControl, { refreshing, onRefresh }),
+        contentContainerStyle: sales.length === 0 ? styles2.empty : styles2.list,
+        ListEmptyComponent: /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Text, { style: styles2.emptyText }, error != null ? error : "No sales yet. Tap Create above."),
+        renderItem: ({ item }) => {
+          var _a;
+          return /* @__PURE__ */ import_react2.default.createElement(import_react_native2.View, { style: styles2.card }, /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Text, { style: styles2.title }, item.title), /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Text, { style: styles2.address }, item.address), /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Text, { style: styles2.meta }, (_a = item.start_date) != null ? _a : "", " ", item.start_time ? `\xB7 ${item.start_time}` : "", item.end_time ? `\u2013${item.end_time}` : ""), /* @__PURE__ */ import_react2.default.createElement(
+            import_react_native2.Pressable,
+            {
+              style: styles2.deleteBtn,
+              onPress: () => confirmDelete(item)
+            },
+            /* @__PURE__ */ import_react2.default.createElement(import_react_native2.Text, { style: styles2.deleteText }, "Delete")
+          ));
+        }
+      }
+    ));
+  }
+  var styles2 = import_react_native2.StyleSheet.create({
+    container: { flex: 1, backgroundColor: "#f8fafc" },
+    intro: {
+      padding: 16,
+      backgroundColor: "#fff",
+      borderBottomWidth: 1,
+      borderBottomColor: "#e2e8f0"
+    },
+    heading: { fontSize: 22, fontWeight: "700", marginBottom: 4 },
+    blurb: { fontSize: 14, color: "#475569", marginBottom: 12 },
+    createBtn: {
+      backgroundColor: "#2563eb",
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: "center"
+    },
+    createBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: "#64748b",
+      textTransform: "uppercase",
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 6
+    },
+    list: { padding: 12 },
+    empty: {
+      flexGrow: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24
+    },
+    emptyText: { color: "#64748b", fontSize: 15, textAlign: "center" },
+    card: {
+      backgroundColor: "#fff",
+      padding: 14,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: "#e2e8f0",
+      marginBottom: 10
+    },
+    title: { fontSize: 16, fontWeight: "700", marginBottom: 2 },
+    address: { fontSize: 13, color: "#475569", marginBottom: 4 },
+    meta: { fontSize: 12, color: "#64748b", marginBottom: 10 },
+    deleteBtn: {
+      alignSelf: "flex-start",
+      backgroundColor: "#fee2e2",
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 8
+    },
+    deleteText: { color: "#b91c1c", fontWeight: "600" }
+  });
+
   // components/index.ts
   globalThis.JainPlugins = globalThis.JainPlugins || {};
   globalThis.JainPlugins.yardsailing = {
-    SaleForm
+    SaleForm,
+    YardsailingHome
   };
 })();

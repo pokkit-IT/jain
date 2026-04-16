@@ -19,7 +19,13 @@
   ],
   "components": {
     "bundle": "bundle/yardsailing.js",
-    "exports": ["SaleForm"]
+    "exports": ["SaleForm", "YardsailingHome"]
+  },
+  "home": {
+    "component": "YardsailingHome",
+    "label": "Yardsailing",
+    "icon": "storefront-outline",
+    "description": "Find, drop pins, and manage your yard sales."
   },
   "examples": [
     {

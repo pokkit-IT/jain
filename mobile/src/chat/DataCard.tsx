@@ -129,6 +129,20 @@ export function DataCard({ displayHint, data }: DataCardProps) {
                   ) : null}
                   <View style={{ flex: 1 }}>
                     <View style={styles.cardInnerRow}>
+                      {sale.source === "sighting" ? (
+                        <View
+                          style={[
+                            styles.badge,
+                            (sale.confirmations ?? 1) >= 2
+                              ? styles.badgeConfirmed
+                              : styles.badgeUnconfirmed,
+                          ]}
+                        >
+                          <Text style={styles.badgeText}>
+                            {(sale.confirmations ?? 1) >= 2 ? "Confirmed" : "Unconfirmed"}
+                          </Text>
+                        </View>
+                      ) : null}
                       <Text style={styles.title} numberOfLines={1}>{sale.title}</Text>
                       {sale.distance_miles != null ? (
                         <Text style={styles.distance}>{sale.distance_miles.toFixed(1)} mi</Text>
@@ -244,6 +258,21 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 15, fontWeight: "700", color: "#0f172a", flex: 1, paddingRight: 8 },
   distance: { fontSize: 12, color: "#2563eb", fontWeight: "600" },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginRight: 6,
+    flexShrink: 0,
+    alignSelf: "flex-start",
+  },
+  badgeUnconfirmed: { backgroundColor: "#fef3c7" },
+  badgeConfirmed: { backgroundColor: "#dcfce7" },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
   address: { fontSize: 13, color: "#475569", marginTop: 2 },
   meta: { fontSize: 12, color: "#64748b", marginTop: 4 },
   chev: {

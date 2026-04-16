@@ -82,6 +82,7 @@ class SaleResponse(BaseModel):
     # Always present; uses SaleDay overrides when set, defaults otherwise.
     days: list[DayHoursBody] = Field(default_factory=list)
     photos: list[SalePhotoOut] = Field(default_factory=list)
+    groups: list["GroupSummary"] = Field(default_factory=list)
     source: str = "host"
     confirmations: int = 1
 
@@ -406,3 +407,111 @@ async def drop_sighting_route(
     except DropWindowClosed:
         raise HTTPException(status_code=409, detail="drop_window_closed")
     return SaleResponse.from_model(sale)
+
+
+@router.get("/groups", response_model=list[GroupSummary])
+async def list_groups_route(
+    q: str = Query(default=""),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+) -> list[GroupSummary]:
+    groups = await _search_groups(db, q, limit)
+    return [GroupSummary.from_model(g) for g in groups]
+
+
+@router.post(
+    "/groups",
+    status_code=status.HTTP_201_CREATED,
+    response_model=GroupDetailResponse,
+)
+async def create_group_route(
+    body: CreateGroupBody,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> GroupDetailResponse:
+    try:
+        group = await _create_group(db, user, CreateGroupInput(
+            name=body.name,
+            description=body.description,
+            start_date=body.start_date,
+            end_date=body.end_date,
+        ))
+    except GroupNameTaken as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except GroupError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    await db.commit()
+    return GroupDetailResponse(
+        id=group.id, name=group.name, slug=group.slug,
+        description=group.description,
+        start_date=group.start_date, end_date=group.end_date,
+        created_by=str(group.created_by),
+        sales_count=0,
+    )
+
+
+@router.get("/groups/{group_id}", response_model=GroupDetailResponse)
+async def get_group_route(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> GroupDetailResponse:
+    group = await _get_group(db, group_id)
+    if group is None:
+        raise HTTPException(status_code=404, detail="group_not_found")
+    return GroupDetailResponse(
+        id=group.id, name=group.name, slug=group.slug,
+        description=group.description,
+        start_date=group.start_date, end_date=group.end_date,
+        created_by=str(group.created_by),
+        sales_count=len(group.sales or []),
+    )
+
+
+@router.get("/groups/{group_id}/sales", response_model=list[SaleResponse])
+async def list_group_sales_route(
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> list[SaleResponse]:
+    from sqlalchemy.orm import selectinload as _sl
+    res = await db.execute(
+        select(SaleGroup)
+        .options(
+            _sl(SaleGroup.sales).selectinload(Sale.photos),
+            _sl(SaleGroup.sales).selectinload(Sale.groups),
+        )
+        .where(SaleGroup.id == group_id)
+    )
+    group = res.scalar_one_or_none()
+    if group is None:
+        raise HTTPException(status_code=404, detail="group_not_found")
+    return [SaleResponse.from_model(s) for s in (group.sales or [])]
+
+
+@router.post("/sales/{sale_id}/groups", response_model=list[GroupSummary])
+async def set_sale_groups_route(
+    sale_id: str,
+    body: SetSaleGroupsBody,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[GroupSummary]:
+    sale = await get_sale_by_id(db, sale_id)
+    if sale is None:
+        raise HTTPException(status_code=404, detail="sale_not_found")
+    if sale.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="not_sale_owner")
+    try:
+        groups = await _set_sale_groups(db, sale, body.group_ids)
+    except GroupDateMismatch as e:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "group_date_mismatch",
+                "group_id": e.group.id,
+                "group_name": e.group.name,
+                "message": str(e),
+            },
+        )
+    except GroupError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    await db.commit()
+    return [GroupSummary.from_model(g) for g in groups]

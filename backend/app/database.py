@@ -39,6 +39,15 @@ async def _apply_dev_migrations(conn) -> None:
         ("yardsailing_sales", "lng", "REAL"),
         ("yardsailing_sales", "source", "VARCHAR(16) NOT NULL DEFAULT 'host'"),
         ("yardsailing_sales", "confirmations", "INTEGER NOT NULL DEFAULT 1"),
+        # Nutrition plugin: reserved slots for future column patches. All columns
+        # currently in the model are created by Base.metadata.create_all(); the
+        # no-op entries below document the table list so upcoming schema
+        # changes have a clear home.
+        ("nutrition_user_profiles", "tone_mode", "VARCHAR(20) NOT NULL DEFAULT 'coach'"),
+        ("nutrition_user_profiles", "goals", "VARCHAR(50) NOT NULL DEFAULT 'fat-loss'"),
+        ("nutrition_foods", "usda_fdc_id", "VARCHAR(20)"),
+        ("nutrition_meals", "is_closed", "INTEGER NOT NULL DEFAULT 0"),
+        ("nutrition_day_summaries", "is_closed", "INTEGER NOT NULL DEFAULT 0"),
     ]
     for table, col, coltype in wants:
         if not await conn.run_sync(_table_exists, table):

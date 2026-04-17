@@ -1,0 +1,12 @@
+{
+  "name": "jain-custody-bundle",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@react-native-community/datetimepicker": "^9.1.0",
+    "esbuild": "^0.24.0"
+  }
+}

@@ -54,16 +54,6 @@ async def export_csv(
 
 # ---------- PDF ----------
 
-from reportlab.lib.pagesizes import LETTER
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Image as RLImage,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-)
-
 
 def _type_label(t: str) -> str:
     return {
@@ -79,6 +69,16 @@ async def export_pdf(
     db: AsyncSession, user: User, *,
     child_id: str, from_dt: datetime, to_dt: datetime,
 ) -> bytes:
+    from reportlab.lib.pagesizes import LETTER
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import inch
+    from reportlab.platypus import (
+        Image as RLImage,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+    )
+
     from app.config import settings
 
     uploads_root = Path(settings.UPLOADS_DIR)

@@ -146,3 +146,70 @@ TOOLS: list[ToolDef] = [
         handler=get_macro_summary_handler,
     ),
 ]
+
+
+def _profile_to_dict(profile) -> dict:
+    return {
+        "user_id": str(profile.user_id),
+        "calorie_target": profile.calorie_target,
+        "protein_g": profile.protein_g,
+        "carbs_g": profile.carbs_g,
+        "fat_g": profile.fat_g,
+        "fiber_g": profile.fiber_g,
+        "tone_mode": profile.tone_mode,
+        "goals": profile.goals,
+    }
+
+
+async def set_macro_targets_handler(args, user=None, db=None):
+    """Upsert macro targets / tone / goals. Returns the full updated profile."""
+    if user is None:
+        return envelope(status="error", message="Authentication required.")
+
+    allowed = {
+        "calorie_target", "protein_g", "carbs_g", "fat_g",
+        "fiber_g", "tone_mode", "goals",
+    }
+    updates = {k: v for k, v in (args or {}).items() if k in allowed and v is not None}
+    profile = await upsert_profile(db, user, updates)
+
+    changed = ", ".join(sorted(updates.keys())) or "nothing"
+    return envelope(
+        status="ok",
+        data=_profile_to_dict(profile),
+        message=f"Updated: {changed}.",
+    )
+
+
+TOOLS.append(
+    ToolDef(
+        name="set_macro_targets",
+        description=(
+            "Update the user's macro targets, tone mode, or goals. Only "
+            "pass fields the user actually mentioned — unspecified fields "
+            "stay at their current value."
+        ),
+        input_schema=ToolInputSchema(
+            properties={
+                "calorie_target": {"type": "integer", "description": "Daily kcal target."},
+                "protein_g": {"type": "integer", "description": "Daily protein in grams."},
+                "carbs_g": {"type": "integer", "description": "Daily carbs in grams."},
+                "fat_g": {"type": "integer", "description": "Daily fat in grams."},
+                "fiber_g": {"type": "integer", "description": "Daily fiber in grams."},
+                "tone_mode": {
+                    "type": "string",
+                    "enum": ["coach", "ruthless-mentor", "supportive"],
+                    "description": "Preferred coaching tone.",
+                },
+                "goals": {
+                    "type": "string",
+                    "enum": ["fat-loss", "maintenance", "muscle-gain"],
+                    "description": "Top-line goal.",
+                },
+            },
+            required=[],
+        ),
+        auth_required=True,
+        handler=set_macro_targets_handler,
+    )
+)

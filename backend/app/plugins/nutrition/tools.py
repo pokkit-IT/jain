@@ -78,6 +78,25 @@ async def log_meal_handler(args, user=None, db=None):
     )
 
 
+async def get_macro_summary_handler(args, user=None, db=None):
+    """Report totals vs targets for today/yesterday/week or a specific date."""
+    if user is None:
+        return envelope(status="error", message="Authentication required.")
+
+    period = args.get("period") or ("today" if not args.get("date") else None)
+    date_arg = args.get("date")
+    data = await summary_for_period(db, user, period=period, date=date_arg)
+
+    totals = data["totals"]
+    targets = data["targets"]
+    cal_pct = data["pct_complete"]["calories"]
+    message = (
+        f"{cal_pct}% of calorie target used "
+        f"({int(totals['calories'])}/{int(targets['calories'])} kcal)."
+    )
+    return envelope(status="ok", data=data, message=message)
+
+
 TOOLS: list[ToolDef] = [
     ToolDef(
         name="log_meal",
@@ -101,5 +120,29 @@ TOOLS: list[ToolDef] = [
         ),
         auth_required=True,
         handler=log_meal_handler,
+    ),
+    ToolDef(
+        name="get_macro_summary",
+        description=(
+            "Check macro totals against targets for today, yesterday, the "
+            "past week, or a specific date. Use when the user asks about "
+            "their macros, calories remaining, or progress."
+        ),
+        input_schema=ToolInputSchema(
+            properties={
+                "period": {
+                    "type": "string",
+                    "enum": ["today", "yesterday", "week"],
+                    "description": "Time window. Default 'today'.",
+                },
+                "date": {
+                    "type": "string",
+                    "description": "Specific day, YYYY-MM-DD. Overrides period.",
+                },
+            },
+            required=[],
+        ),
+        auth_required=True,
+        handler=get_macro_summary_handler,
     ),
 ]

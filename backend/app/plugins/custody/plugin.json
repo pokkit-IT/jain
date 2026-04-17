@@ -1,0 +1,33 @@
+{
+  "name": "custody",
+  "version": "1.0.0",
+  "description": "Log visitations, expenses, texts, and schedules with your children.",
+  "author": "jim shelly",
+  "type": "internal",
+  "skills": [],
+  "components": {
+    "bundle": "bundle/custody.js",
+    "exports": [
+      "CustodyHome",
+      "ExpenseForm",
+      "TextCaptureForm",
+      "EventForm",
+      "ScheduleForm",
+      "ScheduleListScreen",
+      "ChildrenScreen",
+      "ExportSheet"
+    ]
+  },
+  "home": {
+    "component": "CustodyHome",
+    "label": "Custody",
+    "icon": "people-outline",
+    "description": "Track visitation events, expenses, and schedules."
+  },
+  "examples": [
+    {"prompt": "Picked up Mason", "description": "Logs a pickup stamped to now"},
+    {"prompt": "Dropped Mason off", "description": "Logs a dropoff"},
+    {"prompt": "Bowling with Mason $42", "description": "Logs an activity plus an expense"},
+    {"prompt": "How much have I spent on Mason this month?", "description": "Summarizes expense events"}
+  ]
+}

@@ -111,3 +111,52 @@ def parse_meal_text(raw_input: str) -> list[ParsedItem]:
         if item is not None:
             out.append(item)
     return out
+
+
+_UNIT_TO_GRAMS: dict[str, float] = {
+    "g": 1.0,
+    "oz": 28.35,
+    "lb": 453.59,
+    "cup": 240.0,
+    "tbsp": 15.0,
+    "tsp": 5.0,
+    "ml": 1.0,
+}
+_FALLBACK_GRAMS_PER_UNIT = 100.0
+
+
+def _grams_per_unit(unit: str, food: FoodMacros) -> float:
+    if unit in _UNIT_TO_GRAMS:
+        return _UNIT_TO_GRAMS[unit]
+    if unit in ("piece", "unit"):
+        return food.serving_size_g or _FALLBACK_GRAMS_PER_UNIT
+    return _FALLBACK_GRAMS_PER_UNIT
+
+
+def calculate_macros(food: FoodMacros, quantity: float, unit: str) -> ItemMacros:
+    """Scale a per-100g FoodMacros to `quantity` of `unit`.
+
+    Net carbs = carbs - fiber, floored at 0.
+    """
+    grams = quantity * _grams_per_unit(unit, food)
+    factor = grams / 100.0
+
+    calories = food.calories_per_100g * factor
+    protein_g = food.protein_per_100g * factor
+    carbs_g = food.carbs_per_100g * factor
+    fiber_g = food.fiber_per_100g * factor
+    fat_g = food.fat_per_100g * factor
+    net_carbs_g = max(0.0, carbs_g - fiber_g)
+
+    return ItemMacros(
+        name=food.name,
+        quantity=quantity,
+        unit=unit,
+        calories=round(calories, 4),
+        protein_g=round(protein_g, 4),
+        carbs_g=round(carbs_g, 4),
+        net_carbs_g=round(net_carbs_g, 4),
+        fat_g=round(fat_g, 4),
+        fiber_g=round(fiber_g, 4),
+        food_source=food.source,
+    )

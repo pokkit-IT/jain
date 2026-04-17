@@ -56,3 +56,71 @@ def test_parse_and_conjunction():
 def test_parse_empty_returns_empty():
     assert parse_meal_text("") == []
     assert parse_meal_text("   ") == []
+
+
+from app.plugins.nutrition.schemas import FoodMacros
+from app.plugins.nutrition.services import calculate_macros
+
+
+def _food(name="chicken", **overrides):
+    defaults = dict(
+        name=name,
+        calories_per_100g=165.0,
+        protein_per_100g=31.0,
+        carbs_per_100g=0.0,
+        fiber_per_100g=0.0,
+        fat_per_100g=3.6,
+    )
+    defaults.update(overrides)
+    return FoodMacros(**defaults)
+
+
+def test_grams_scale_linearly():
+    m = calculate_macros(_food(), quantity=200, unit="g")
+    assert m.calories == 330.0
+    assert m.protein_g == 62.0
+    assert m.fiber_g == 0.0
+    assert m.net_carbs_g == 0.0
+
+
+def test_ounces_convert_to_grams():
+    m = calculate_macros(_food(), quantity=4, unit="oz")
+    assert round(m.calories, 2) == 187.11
+    assert round(m.protein_g, 2) == 35.15
+
+
+def test_cup_uses_240g():
+    m = calculate_macros(
+        _food(name="oatmeal", calories_per_100g=68, protein_per_100g=2.4,
+              carbs_per_100g=12.0, fiber_per_100g=1.7, fat_per_100g=1.4),
+        quantity=1, unit="cup",
+    )
+    assert round(m.calories, 2) == 163.2
+
+
+def test_piece_falls_back_to_100g_when_no_serving_size():
+    m = calculate_macros(_food(), quantity=2, unit="piece")
+    assert m.calories == 330.0
+
+
+def test_piece_uses_serving_size_g_when_set():
+    food = _food(name="egg", calories_per_100g=143, protein_per_100g=12.6,
+                 carbs_per_100g=0.7, fiber_per_100g=0.0, fat_per_100g=9.5)
+    food.serving_size_g = 50.0
+    m = calculate_macros(food, quantity=2, unit="piece")
+    assert m.calories == 143.0
+    assert round(m.protein_g, 2) == 12.6
+
+
+def test_net_carbs_subtracts_fiber():
+    food = _food(name="broccoli", calories_per_100g=34, protein_per_100g=2.8,
+                 carbs_per_100g=7.0, fiber_per_100g=2.6, fat_per_100g=0.4)
+    m = calculate_macros(food, quantity=100, unit="g")
+    assert m.carbs_g == 7.0
+    assert round(m.net_carbs_g, 2) == 4.4
+    assert m.fiber_g == 2.6
+
+
+def test_unknown_unit_falls_back_to_100g():
+    m = calculate_macros(_food(), quantity=1, unit="zzz")
+    assert m.calories == 165.0

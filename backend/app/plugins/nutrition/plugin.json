@@ -1,0 +1,26 @@
+{
+  "name": "nutrition",
+  "version": "1.0.0",
+  "description": "Conversational macro tracking and meal logging",
+  "author": "pokkit-IT",
+  "type": "internal",
+  "skills": [
+    {
+      "name": "meal-log",
+      "description": "Log a meal conversationally. Use when user describes eating something, mentions a meal, or says what they had.",
+      "tools": ["log_meal"]
+    },
+    {
+      "name": "macro-tracker",
+      "description": "Check macro progress, set targets, or ask about daily nutrition status.",
+      "tools": ["get_macro_summary", "set_macro_targets"]
+    }
+  ],
+  "examples": [
+    {"prompt": "Breakfast: 2 eggs, toast, peanut butter", "description": "Log a meal"},
+    {"prompt": "I just had a protein shake", "description": "Quick meal log"},
+    {"prompt": "What are my macros today?", "description": "Check daily progress"},
+    {"prompt": "How am I doing on protein?", "description": "Macro status"},
+    {"prompt": "Set my protein target to 180g", "description": "Update targets"}
+  ]
+}

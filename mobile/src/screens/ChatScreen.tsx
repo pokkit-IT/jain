@@ -2,7 +2,6 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -20,7 +19,6 @@ import { MessageBubble } from "../chat/MessageBubble";
 import { ToolIndicator } from "../chat/ToolIndicator";
 import { useChat } from "../hooks/useChat";
 import { useLocation } from "../hooks/useLocation";
-import { PluginHost } from "../plugins/PluginHost";
 import { useAppStore } from "../store/useAppStore";
 import { listPlugins } from "../api/plugins";
 
@@ -32,9 +30,7 @@ export function ChatScreen() {
   const inputRef = useRef<TextInput>(null);
   const headerHeight = useHeaderHeight();
 
-  const activeComponent = useAppStore((s) => s.activeComponent);
   const activeChoices = useAppStore((s) => s.activeChoices);
-  const hideComponent = useAppStore((s) => s.hideComponent);
   const setPlugins = useAppStore((s) => s.setPlugins);
 
   // Refocus the TextInput every time the Jain tab gains focus. Bottom-tab
@@ -150,21 +146,6 @@ export function ChatScreen() {
           <Text style={styles.sendText}>Send</Text>
         </TouchableOpacity>
       </View>
-
-      <Modal visible={activeComponent !== null} animationType="slide">
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={hideComponent}>
-            <Text style={styles.close}>Close</Text>
-          </TouchableOpacity>
-        </View>
-        {activeComponent ? (
-          <PluginHost
-            pluginName={activeComponent.plugin}
-            componentName={activeComponent.name}
-            props={{ initialData: activeComponent.props }}
-          />
-        ) : null}
-      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -197,13 +178,4 @@ const styles = StyleSheet.create({
   },
   sendDisabled: { backgroundColor: "#94a3b8" },
   sendText: { color: "#fff", fontWeight: "600" },
-  modalHeader: {
-    paddingTop: 50,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-  },
-  close: { color: "#2563eb", fontSize: 16 },
 });

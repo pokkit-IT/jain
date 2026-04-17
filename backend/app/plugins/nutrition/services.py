@@ -234,3 +234,92 @@ async def resolve_food(name: str, db: AsyncSession) -> FoodMacros:
         fat_per_100g=0.0,
         source="estimate",
     )
+
+
+from datetime import date as _date, datetime as _datetime, timezone as _timezone
+
+from app.models.user import User
+
+from .models import DaySummary, Meal, MealItem
+
+
+async def _get_or_create_day_summary(
+    db: AsyncSession, user_id, day_date: str,
+) -> DaySummary:
+    stmt = select(DaySummary).where(
+        DaySummary.user_id == user_id,
+        DaySummary.day_date == day_date,
+    )
+    row = (await db.execute(stmt)).scalar_one_or_none()
+    if row is not None:
+        return row
+    row = DaySummary(user_id=user_id, day_date=day_date)
+    db.add(row)
+    await db.flush()
+    return row
+
+
+def _sum_item_totals(items: list[ItemMacros]) -> dict[str, float]:
+    return {
+        "calories": sum(i.calories for i in items),
+        "protein_g": sum(i.protein_g for i in items),
+        "carbs_g": sum(i.carbs_g for i in items),
+        "net_carbs_g": sum(i.net_carbs_g for i in items),
+        "fat_g": sum(i.fat_g for i in items),
+        "fiber_g": sum(i.fiber_g for i in items),
+    }
+
+
+async def log_meal_for_user(
+    db: AsyncSession, user: User, raw_input: str,
+    logged_at: _datetime | None = None,
+) -> tuple[Meal, DaySummary]:
+    """Parse, resolve, scale, persist — returns (meal, day_summary).
+
+    Increments (not recomputes) the user's DaySummary row for today.
+    Commits on success; caller does NOT need to commit again.
+    """
+    parsed = parse_meal_text(raw_input)
+    resolved: list[ItemMacros] = []
+    for p in parsed:
+        food = await resolve_food(p.name, db)
+        resolved.append(calculate_macros(food, p.quantity, p.unit))
+
+    now = logged_at or _datetime.now(_timezone.utc)
+    day = now.date().isoformat() if isinstance(now, _datetime) else _date.today().isoformat()
+
+    meal = Meal(
+        user_id=user.id,
+        raw_input=raw_input,
+        day_date=day,
+    )
+    for m in resolved:
+        meal.items.append(MealItem(
+            food_name=m.name,
+            quantity=m.quantity,
+            unit=m.unit,
+            calories=m.calories,
+            protein_g=m.protein_g,
+            carbs_g=m.carbs_g,
+            net_carbs_g=m.net_carbs_g,
+            fat_g=m.fat_g,
+            fiber_g=m.fiber_g,
+            food_source=m.food_source,
+        ))
+    db.add(meal)
+    await db.flush()
+
+    summary = await _get_or_create_day_summary(db, user.id, day)
+    totals = _sum_item_totals(resolved)
+    summary.total_calories += totals["calories"]
+    summary.total_protein_g += totals["protein_g"]
+    summary.total_carbs_g += totals["carbs_g"]
+    summary.total_net_carbs_g += totals["net_carbs_g"]
+    summary.total_fat_g += totals["fat_g"]
+    summary.total_fiber_g += totals["fiber_g"]
+    summary.meal_count += 1
+
+    await db.commit()
+    await db.refresh(meal)
+    await db.refresh(summary)
+    return meal, summary

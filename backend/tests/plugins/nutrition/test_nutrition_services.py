@@ -215,3 +215,64 @@ async def test_resolve_food_estimate_fallback_when_usda_empty(session_and_user, 
     fm = await resolve_food("mysteryfood", session)
     assert fm.source == "estimate"
     assert fm.calories_per_100g == 0.0
+
+
+from datetime import date
+
+from app.plugins.nutrition.models import DaySummary, Meal, MealItem
+from app.plugins.nutrition.services import log_meal_for_user
+
+
+async def test_log_meal_creates_meal_items_and_day_summary(session_and_user, monkeypatch):
+    session, user = session_and_user
+    async def _fake_resolve(name, _db):
+        return FoodMacros(
+            name=name, calories_per_100g=100, protein_per_100g=10,
+            carbs_per_100g=5, fiber_per_100g=1, fat_per_100g=3,
+            source="usda",
+        )
+    monkeypatch.setattr(nutrition_services, "resolve_food", _fake_resolve)
+
+    meal, day = await log_meal_for_user(session, user, "100g chicken")
+
+    assert meal.user_id == user.id
+    assert meal.day_date == date.today().isoformat()
+    assert len(meal.items) == 1
+    item = meal.items[0]
+    assert item.food_name == "chicken"
+    assert item.calories == 100.0
+    assert item.protein_g == 10.0
+
+    assert day.user_id == user.id
+    assert day.day_date == meal.day_date
+    assert day.total_calories == 100.0
+    assert day.meal_count == 1
+
+
+async def test_log_meal_increments_existing_day_summary(session_and_user, monkeypatch):
+    session, user = session_and_user
+    async def _fake_resolve(name, _db):
+        return FoodMacros(
+            name=name, calories_per_100g=100, protein_per_100g=10,
+            carbs_per_100g=5, fiber_per_100g=1, fat_per_100g=3,
+        )
+    monkeypatch.setattr(nutrition_services, "resolve_food", _fake_resolve)
+
+    _m1, _d1 = await log_meal_for_user(session, user, "100g chicken")
+    _m2, d2 = await log_meal_for_user(session, user, "200g chicken")
+
+    assert d2.total_calories == 300.0
+    assert d2.meal_count == 2
+    assert round(d2.total_protein_g, 2) == 30.0
+
+
+async def test_log_meal_empty_parse_still_creates_meal(session_and_user, monkeypatch):
+    session, user = session_and_user
+    async def _no_resolve(*a, **k):
+        raise AssertionError("should not be called")
+    monkeypatch.setattr(nutrition_services, "resolve_food", _no_resolve)
+
+    meal, day = await log_meal_for_user(session, user, "")
+    assert meal.items == []
+    assert day.total_calories == 0.0
+    assert day.meal_count == 1

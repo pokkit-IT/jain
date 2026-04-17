@@ -11,20 +11,9 @@ from app.plugins.core.types import PluginRegistration
 
 
 def register() -> PluginRegistration:
-    try:
-        from .routes import router  # type: ignore[attr-defined]
-    except ImportError:
-        router = None
-
-    try:
-        from .tools import TOOLS  # type: ignore[attr-defined]
-    except ImportError:
-        TOOLS = []
-
-    try:
-        from . import models  # noqa: F401
-    except ImportError:
-        pass
+    from . import models  # noqa: F401  (registers tables on Base.metadata)
+    from .routes import router
+    from .tools import TOOLS
 
     return PluginRegistration(
         name="custody",

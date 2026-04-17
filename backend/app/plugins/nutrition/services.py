@@ -160,3 +160,77 @@ def calculate_macros(food: FoodMacros, quantity: float, unit: str) -> ItemMacros
         fiber_g=round(fiber_g, 4),
         food_source=food.source,
     )
+
+
+from sqlalchemy import func as _sqlfunc, or_, select
+
+from .models import Food
+from .usda import fetch_usda_food
+
+
+async def _find_cached_food(name: str, db: AsyncSession) -> Food | None:
+    """Case-insensitive lookup against nutrition_foods by name or alias."""
+    needle = name.strip().lower()
+    stmt = select(Food).where(
+        or_(
+            _sqlfunc.lower(Food.name) == needle,
+            _sqlfunc.lower(Food.aliases).like(f"%{needle}%"),
+        )
+    ).limit(1)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+def _food_to_macros(f: Food) -> FoodMacros:
+    return FoodMacros(
+        name=f.name,
+        calories_per_100g=f.calories_per_100g,
+        protein_per_100g=f.protein_per_100g,
+        carbs_per_100g=f.carbs_per_100g,
+        fiber_per_100g=f.fiber_per_100g,
+        fat_per_100g=f.fat_per_100g,
+        source=f.source,
+        usda_fdc_id=f.usda_fdc_id,
+        serving_size_g=None,
+    )
+
+
+async def _cache_usda_food(fm: FoodMacros, db: AsyncSession) -> None:
+    """Persist a USDA-sourced FoodMacros into nutrition_foods."""
+    db.add(Food(
+        name=fm.name,
+        calories_per_100g=fm.calories_per_100g,
+        protein_per_100g=fm.protein_per_100g,
+        carbs_per_100g=fm.carbs_per_100g,
+        fiber_per_100g=fm.fiber_per_100g,
+        fat_per_100g=fm.fat_per_100g,
+        source=fm.source,
+        usda_fdc_id=fm.usda_fdc_id,
+    ))
+    await db.commit()
+
+
+async def resolve_food(name: str, db: AsyncSession) -> FoodMacros:
+    """Return macros for `name`, preferring cache → USDA → zero estimate.
+
+    Never returns None. Unknown foods yield source='estimate' with zeroed
+    macros so meal logging never hard-fails — the user can correct later.
+    """
+    cached = await _find_cached_food(name, db)
+    if cached is not None:
+        return _food_to_macros(cached)
+
+    hit = await fetch_usda_food(name)
+    if hit is not None:
+        await _cache_usda_food(hit, db)
+        return hit
+
+    return FoodMacros(
+        name=name,
+        calories_per_100g=0.0,
+        protein_per_100g=0.0,
+        carbs_per_100g=0.0,
+        fiber_per_100g=0.0,
+        fat_per_100g=0.0,
+        source="estimate",
+    )

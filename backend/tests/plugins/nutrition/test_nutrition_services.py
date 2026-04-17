@@ -124,3 +124,94 @@ def test_net_carbs_subtracts_fiber():
 def test_unknown_unit_falls_back_to_100g():
     m = calculate_macros(_food(), quantity=1, unit="zzz")
     assert m.calories == 165.0
+
+
+from sqlalchemy import select
+
+from app.plugins.nutrition import services as nutrition_services
+from app.plugins.nutrition.models import Food
+from app.plugins.nutrition.services import resolve_food
+
+
+async def test_resolve_food_hits_cache_first(session_and_user, monkeypatch):
+    session, _ = session_and_user
+    session.add(Food(
+        name="oatmeal", calories_per_100g=68, protein_per_100g=2.4,
+        carbs_per_100g=12.0, fiber_per_100g=1.7, fat_per_100g=1.4,
+    ))
+    await session.commit()
+
+    called = {"count": 0}
+    async def _should_not_call(_name):
+        called["count"] += 1
+        return None
+    monkeypatch.setattr(nutrition_services, "fetch_usda_food", _should_not_call)
+
+    fm = await resolve_food("oatmeal", session)
+    assert fm.name == "oatmeal"
+    assert fm.calories_per_100g == 68
+    assert called["count"] == 0
+
+
+async def test_resolve_food_case_insensitive_cache(session_and_user, monkeypatch):
+    session, _ = session_and_user
+    session.add(Food(
+        name="Chicken Breast", calories_per_100g=165, protein_per_100g=31,
+        carbs_per_100g=0.0, fiber_per_100g=0.0, fat_per_100g=3.6,
+    ))
+    await session.commit()
+
+    async def _no_usda(_name):
+        return None
+    monkeypatch.setattr(nutrition_services, "fetch_usda_food", _no_usda)
+
+    fm = await resolve_food("chicken breast", session)
+    assert fm.name == "Chicken Breast"
+
+
+async def test_resolve_food_alias_match(session_and_user, monkeypatch):
+    session, _ = session_and_user
+    session.add(Food(
+        name="peanut butter", aliases="pb, pnut butter",
+        calories_per_100g=588, protein_per_100g=25, carbs_per_100g=20,
+        fiber_per_100g=6, fat_per_100g=50,
+    ))
+    await session.commit()
+
+    async def _no_usda(_name):
+        raise AssertionError("should not be called")
+    monkeypatch.setattr(nutrition_services, "fetch_usda_food", _no_usda)
+
+    fm = await resolve_food("pb", session)
+    assert fm.name == "peanut butter"
+
+
+async def test_resolve_food_falls_through_to_usda_and_caches(session_and_user, monkeypatch):
+    session, _ = session_and_user
+
+    async def _fake_usda(name):
+        assert name == "salmon"
+        return FoodMacros(
+            name="Fish, salmon, Atlantic",
+            calories_per_100g=208, protein_per_100g=20,
+            carbs_per_100g=0.0, fiber_per_100g=0.0, fat_per_100g=13,
+            source="usda", usda_fdc_id="175167",
+        )
+    monkeypatch.setattr(nutrition_services, "fetch_usda_food", _fake_usda)
+
+    fm = await resolve_food("salmon", session)
+    assert fm.name == "Fish, salmon, Atlantic"
+
+    rows = (await session.execute(select(Food))).scalars().all()
+    assert any(r.usda_fdc_id == "175167" for r in rows)
+
+
+async def test_resolve_food_estimate_fallback_when_usda_empty(session_and_user, monkeypatch):
+    session, _ = session_and_user
+    async def _none(_):
+        return None
+    monkeypatch.setattr(nutrition_services, "fetch_usda_food", _none)
+
+    fm = await resolve_food("mysteryfood", session)
+    assert fm.source == "estimate"
+    assert fm.calories_per_100g == 0.0

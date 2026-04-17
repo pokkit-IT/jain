@@ -6,7 +6,7 @@ def test_register_returns_registration_with_name_and_version():
     assert reg.name == "custody"
     assert reg.version == "1.0.0"
     assert reg.type == "internal"
-    assert reg.tools == []
+    assert len(reg.tools) == 7
 
 
 def test_plugin_json_exists_and_has_home_block():

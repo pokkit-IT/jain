@@ -4,7 +4,38 @@
   "description": "Log visitations, expenses, texts, and schedules with your children.",
   "author": "jim shelly",
   "type": "internal",
-  "skills": [],
+  "skills": [
+    {
+      "name": "logging",
+      "description": "Log visitation and communication events",
+      "tools": ["log_custody_event"]
+    },
+    {
+      "name": "expenses",
+      "description": "Log and review child-related expenses",
+      "tools": ["log_expense", "show_expense_form"]
+    },
+    {
+      "name": "missed_visits",
+      "description": "Record missed or denied visitations",
+      "tools": ["log_missed_visit"]
+    },
+    {
+      "name": "query",
+      "description": "Query custody history and summaries",
+      "tools": ["query_custody_events"]
+    },
+    {
+      "name": "text_capture",
+      "description": "Save screenshots of co-parent texts",
+      "tools": ["show_text_capture"]
+    },
+    {
+      "name": "navigation",
+      "description": "Open custody home screen",
+      "tools": ["show_custody_home"]
+    }
+  ],
   "components": {
     "bundle": "bundle/custody.js",
     "exports": [

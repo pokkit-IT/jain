@@ -212,6 +212,10 @@ async def _dispatch_internal(
     path = req.path
     body_bytes = _json.dumps(req.body or {}).encode("utf-8")
     auth_header = request.headers.get("authorization", "")
+    _log.info(
+        "internal dispatch: %s %s auth_present=%s",
+        method, path, bool(auth_header),
+    )
 
     # Build a minimal ASGI scope for the sub-request.
     headers_list: list[tuple[bytes, bytes]] = [

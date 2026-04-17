@@ -323,3 +323,38 @@ async def log_meal_for_user(
     await db.refresh(meal)
     await db.refresh(summary)
     return meal, summary
+
+
+from .models import UserProfile
+
+_PROFILE_FIELDS = {
+    "calorie_target", "protein_g", "carbs_g", "fat_g",
+    "fiber_g", "tone_mode", "goals",
+}
+
+
+async def get_profile(db: AsyncSession, user: User) -> UserProfile:
+    """Return the user's profile, creating a defaults row on first call."""
+    stmt = select(UserProfile).where(UserProfile.user_id == user.id)
+    existing = (await db.execute(stmt)).scalar_one_or_none()
+    if existing is not None:
+        return existing
+
+    profile = UserProfile(user_id=user.id)
+    db.add(profile)
+    await db.commit()
+    await db.refresh(profile)
+    return profile
+
+
+async def upsert_profile(
+    db: AsyncSession, user: User, updates: dict,
+) -> UserProfile:
+    """Set any of _PROFILE_FIELDS supplied in `updates`. Ignores unknowns."""
+    profile = await get_profile(db, user)
+    for key, value in updates.items():
+        if key in _PROFILE_FIELDS and value is not None:
+            setattr(profile, key, value)
+    await db.commit()
+    await db.refresh(profile)
+    return profile

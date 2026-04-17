@@ -276,3 +276,44 @@ async def test_log_meal_empty_parse_still_creates_meal(session_and_user, monkeyp
     assert meal.items == []
     assert day.total_calories == 0.0
     assert day.meal_count == 1
+
+
+from app.plugins.nutrition.models import UserProfile
+from app.plugins.nutrition.services import get_profile, upsert_profile
+
+
+async def test_get_profile_creates_default_on_first_call(session_and_user):
+    session, user = session_and_user
+    profile = await get_profile(session, user)
+    assert profile.user_id == user.id
+    assert profile.calorie_target == 2000
+    assert profile.protein_g == 150
+
+
+async def test_get_profile_returns_existing(session_and_user):
+    session, user = session_and_user
+    session.add(UserProfile(user_id=user.id, calorie_target=1800, protein_g=160))
+    await session.commit()
+
+    profile = await get_profile(session, user)
+    assert profile.calorie_target == 1800
+    assert profile.protein_g == 160
+
+
+async def test_upsert_profile_updates_only_provided_fields(session_and_user):
+    session, user = session_and_user
+    p1 = await upsert_profile(session, user, {"protein_g": 180, "tone_mode": "ruthless-mentor"})
+    assert p1.protein_g == 180
+    assert p1.tone_mode == "ruthless-mentor"
+    assert p1.calorie_target == 2000
+
+    p2 = await upsert_profile(session, user, {"calorie_target": 1800})
+    assert p2.calorie_target == 1800
+    assert p2.protein_g == 180
+    assert p2.tone_mode == "ruthless-mentor"
+
+
+async def test_upsert_profile_rejects_unknown_fields(session_and_user):
+    session, user = session_and_user
+    p = await upsert_profile(session, user, {"calorie_target": 1500, "bogus": "x"})
+    assert p.calorie_target == 1500

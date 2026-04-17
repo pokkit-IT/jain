@@ -9,6 +9,7 @@ import { AppState, AppStateStatus } from "react-native";
 import { fetchCurrentUser } from "./src/api/auth";
 import { listPlugins } from "./src/api/plugins";
 import { clearToken, getToken } from "./src/auth/tokenStorage";
+import { PluginOverlay } from "./src/plugins/PluginOverlay";
 import { useAppStore } from "./src/store/useAppStore";
 import { ChatScreen } from "./src/screens/ChatScreen";
 import { HelpScreen } from "./src/screens/HelpScreen";
@@ -87,6 +88,7 @@ export default function App() {
           <Tab.Screen name="Help" component={HelpScreen} />
           <Tab.Screen name="Settings" component={SettingsScreen} />
         </Tab.Navigator>
+        <PluginOverlay />
       </NavigationContainer>
       <StatusBar style="light" />
     </SafeAreaProvider>

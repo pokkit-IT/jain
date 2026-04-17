@@ -7,6 +7,8 @@ import {
   View,
 } from "react-native";
 
+import Ionicons from "@expo/vector-icons/Ionicons";
+
 import { PluginHost } from "../plugins/PluginHost";
 import { useAppStore } from "../store/useAppStore";
 import type { PluginSummary } from "../types";
@@ -68,6 +70,14 @@ export function SkillsScreen() {
               })
             }
           >
+            <Ionicons
+              // Cast is safe: Ionicons accepts any glyph name and warns in dev if
+              // unknown. PluginHome.icon is a free-form string from plugin.json.
+              name={(item.home.icon ?? "apps-outline") as React.ComponentProps<typeof Ionicons>["name"]}
+              size={28}
+              color="#475569"
+              style={styles.icon}
+            />
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle}>{item.home.label}</Text>
               <Text style={styles.rowDesc} numberOfLines={2}>
@@ -116,5 +126,6 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontSize: 16, fontWeight: "700", marginBottom: 2 },
   rowDesc: { fontSize: 13, color: "#64748b" },
+  icon: { marginRight: 12 },
   chev: { fontSize: 24, color: "#94a3b8", marginLeft: 8 },
 });

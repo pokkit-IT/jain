@@ -317,3 +317,68 @@ async def test_upsert_profile_rejects_unknown_fields(session_and_user):
     session, user = session_and_user
     p = await upsert_profile(session, user, {"calorie_target": 1500, "bogus": "x"})
     assert p.calorie_target == 1500
+
+
+from app.plugins.nutrition.services import summary_for_period
+
+
+async def test_summary_today_empty_day(session_and_user):
+    session, user = session_and_user
+    result = await summary_for_period(session, user, period="today")
+    today = date.today().isoformat()
+    assert result["period"] == "today"
+    assert result["date"] == today
+    assert result["totals"]["calories"] == 0
+    assert result["targets"]["calories"] == 2000
+    assert result["remaining"]["calories"] == 2000
+    assert result["pct_complete"]["calories"] == 0
+
+
+async def test_summary_today_with_meals(session_and_user, monkeypatch):
+    session, user = session_and_user
+    async def _fake_resolve(name, _db):
+        return FoodMacros(
+            name=name, calories_per_100g=200, protein_per_100g=20,
+            carbs_per_100g=10, fiber_per_100g=2, fat_per_100g=5,
+        )
+    monkeypatch.setattr(nutrition_services, "resolve_food", _fake_resolve)
+    await log_meal_for_user(session, user, "100g chicken")
+
+    result = await summary_for_period(session, user, period="today")
+    assert result["totals"]["calories"] == 200.0
+    assert result["totals"]["protein_g"] == 20.0
+    assert result["remaining"]["calories"] == 1800.0
+    assert result["pct_complete"]["calories"] == 10
+
+
+async def test_summary_specific_date(session_and_user):
+    session, user = session_and_user
+    session.add(DaySummary(
+        user_id=user.id, day_date="2026-04-10",
+        total_calories=1500, total_protein_g=120, meal_count=3,
+    ))
+    await session.commit()
+
+    result = await summary_for_period(session, user, period=None, date="2026-04-10")
+    assert result["date"] == "2026-04-10"
+    assert result["totals"]["calories"] == 1500
+    assert result["totals"]["protein_g"] == 120
+
+
+async def test_summary_week_aggregates_multiple_days(session_and_user):
+    session, user = session_and_user
+    today = date.today()
+    from datetime import timedelta
+    for i in range(3):
+        d = today - timedelta(days=i)
+        session.add(DaySummary(
+            user_id=user.id, day_date=d.isoformat(),
+            total_calories=1000, total_protein_g=80, meal_count=2,
+        ))
+    await session.commit()
+
+    result = await summary_for_period(session, user, period="week")
+    assert result["period"] == "week"
+    assert result["totals"]["calories"] == 3000
+    assert result["totals"]["protein_g"] == 240
+    assert result["targets"]["calories"] == 2000 * 7

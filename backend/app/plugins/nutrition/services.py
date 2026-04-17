@@ -358,3 +358,97 @@ async def upsert_profile(
     await db.commit()
     await db.refresh(profile)
     return profile
+
+
+from datetime import timedelta as _timedelta
+
+
+def _pct(part: float, whole: float) -> int:
+    """Integer percentage. 0 whole → 0."""
+    if whole <= 0:
+        return 0
+    return int(round((part / whole) * 100))
+
+
+def _zero_totals() -> dict[str, float]:
+    return {
+        "calories": 0.0, "protein_g": 0.0, "carbs_g": 0.0,
+        "net_carbs_g": 0.0, "fat_g": 0.0, "fiber_g": 0.0,
+    }
+
+
+def _targets_from_profile(profile: UserProfile, multiplier: int = 1) -> dict[str, float]:
+    return {
+        "calories": profile.calorie_target * multiplier,
+        "protein_g": profile.protein_g * multiplier,
+        "carbs_g": profile.carbs_g * multiplier,
+        "fat_g": profile.fat_g * multiplier,
+        "fiber_g": profile.fiber_g * multiplier,
+    }
+
+
+def _resolve_range(period: str | None, date_arg: str | None) -> tuple[str, str, int]:
+    today = _date.today()
+    if date_arg:
+        return date_arg, date_arg, 1
+    period = period or "today"
+    if period == "today":
+        iso = today.isoformat()
+        return iso, iso, 1
+    if period == "yesterday":
+        y = (today - _timedelta(days=1)).isoformat()
+        return y, y, 1
+    if period == "week":
+        start = (today - _timedelta(days=6)).isoformat()
+        return start, today.isoformat(), 7
+    iso = today.isoformat()
+    return iso, iso, 1
+
+
+async def summary_for_period(
+    db: AsyncSession,
+    user: User,
+    period: str | None = "today",
+    date: str | None = None,
+) -> dict:
+    """Aggregate DaySummary rows across a period and compare to targets.
+
+    Returns a plain dict ready to drop into the tool-response envelope.
+    """
+    start_iso, end_iso, day_multiplier = _resolve_range(period, date)
+    profile = await get_profile(db, user)
+
+    stmt = select(DaySummary).where(
+        DaySummary.user_id == user.id,
+        DaySummary.day_date >= start_iso,
+        DaySummary.day_date <= end_iso,
+    )
+    rows = list((await db.execute(stmt)).scalars().all())
+
+    totals = _zero_totals()
+    for r in rows:
+        totals["calories"] += r.total_calories
+        totals["protein_g"] += r.total_protein_g
+        totals["carbs_g"] += r.total_carbs_g
+        totals["net_carbs_g"] += r.total_net_carbs_g
+        totals["fat_g"] += r.total_fat_g
+        totals["fiber_g"] += r.total_fiber_g
+
+    targets = _targets_from_profile(profile, multiplier=day_multiplier)
+    remaining = {
+        k: round(max(0.0, targets.get(k, 0) - totals.get(k, 0)), 4)
+        for k in ("calories", "protein_g", "carbs_g", "fat_g")
+    }
+    pct = {
+        k: _pct(totals[k], targets.get(k, 0))
+        for k in ("calories", "protein_g", "carbs_g", "fat_g")
+    }
+
+    return {
+        "period": period if not date else None,
+        "date": end_iso,
+        "totals": {k: round(v, 2) for k, v in totals.items()},
+        "targets": targets,
+        "remaining": remaining,
+        "pct_complete": pct,
+    }

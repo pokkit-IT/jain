@@ -63,6 +63,69 @@ async def test_form_submission_creates_sale_row(client_and_token):
         assert rows[0].owner_id == user_id
 
 
+async def test_saleform_group_endpoints_reachable_via_bridge(client_and_token):
+    """SaleForm hits three group endpoints through the plugin-call proxy:
+    on mount (GET /groups), on create-group (POST /groups), and on submit
+    when groups are attached (POST /sales/{id}/groups). All three must
+    resolve through the ASGI sub-request — a 404 here means the routes
+    aren't wired into the yardsailing router, which regressed once in a
+    merge resolution and broke Skills → Yardsailing → Create yard sale."""
+    client, token, _ = client_and_token
+    auth = {"Authorization": f"Bearer {token}"}
+
+    # GET /groups — fired by SaleForm's mount useEffect.
+    r = await client.post(
+        "/api/plugins/yardsailing/call",
+        json={"method": "GET", "path": "/api/plugins/yardsailing/groups", "body": None},
+        headers=auth,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json() == []
+
+    # POST /groups — fired by "Create '<name>'" in the group picker.
+    r = await client.post(
+        "/api/plugins/yardsailing/call",
+        json={
+            "method": "POST",
+            "path": "/api/plugins/yardsailing/groups",
+            "body": {"name": "100 Mile Yard Sale"},
+        },
+        headers=auth,
+    )
+    assert r.status_code == 201, r.text
+    gid = r.json()["id"]
+
+    # Create a sale so we have an id to attach groups to.
+    r = await client.post(
+        "/api/plugins/yardsailing/call",
+        json={
+            "method": "POST",
+            "path": "/api/plugins/yardsailing/sales",
+            "body": {
+                "title": "S", "address": "1 Main", "description": None,
+                "start_date": "2026-05-02", "end_date": "2026-05-02",
+                "start_time": "08:00", "end_time": "17:00",
+            },
+        },
+        headers=auth,
+    )
+    assert r.status_code == 201, r.text
+    sid = r.json()["id"]
+
+    # POST /sales/{id}/groups — fired by SaleForm.submit when groups present.
+    r = await client.post(
+        "/api/plugins/yardsailing/call",
+        json={
+            "method": "POST",
+            "path": f"/api/plugins/yardsailing/sales/{sid}/groups",
+            "body": {"group_ids": [gid]},
+        },
+        headers=auth,
+    )
+    assert r.status_code == 200, r.text
+    assert [g["id"] for g in r.json()] == [gid]
+
+
 async def test_bundle_endpoint_serves_yardsailing_js(client_and_token):
     """The /api/plugins/yardsailing/bundle endpoint should serve the
     compiled UI bundle built in Task 22."""

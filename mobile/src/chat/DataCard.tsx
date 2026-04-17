@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginRight: 6,
     flexShrink: 0,
-    alignSelf: "flex-start",
+    alignSelf: "center",
   },
   badgeUnconfirmed: { backgroundColor: "#fef3c7" },
   badgeConfirmed: { backgroundColor: "#dcfce7" },

@@ -352,7 +352,8 @@
   // components/EventForm.tsx
   var import_react3 = __toESM(__require("react"), 1);
   var import_react_native3 = __require("react-native");
-  function EventForm({ bridge, childId, type = "note", eventId, mode = "create" }) {
+  function EventForm({ bridge, initialData }) {
+    const { childId, type = "note", eventId, mode = "create" } = initialData != null ? initialData : {};
     const [effectiveType, setEffectiveType] = (0, import_react3.useState)(type);
     const [occurredAt, setOccurredAt] = (0, import_react3.useState)(() => (/* @__PURE__ */ new Date()).toISOString());
     const [notes, setNotes] = (0, import_react3.useState)("");

@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -40,9 +41,10 @@ export function NutritionHome({ bridge }: NutritionHomeProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [meals, setMeals] = useState<Meal[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setError(null);
     try {
       const [profileRes, mealsRes] = await Promise.all([
@@ -57,12 +59,18 @@ export function NutritionHome({ bridge }: NutritionHomeProps) {
       setError((e as Error).message || "Could not load nutrition data.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [bridge]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    void load();
+  }, [load]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   const totals = (meals ?? []).reduce(
     (acc, meal) => {
@@ -106,7 +114,11 @@ export function NutritionHome({ bridge }: NutritionHomeProps) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       {/* Macro cards — no header label */}
       <View style={styles.cardsRow}>
         <MacroCard

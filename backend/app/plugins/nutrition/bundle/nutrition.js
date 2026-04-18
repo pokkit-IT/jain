@@ -49,8 +49,9 @@
     const [profile, setProfile] = (0, import_react.useState)(null);
     const [meals, setMeals] = (0, import_react.useState)(null);
     const [loading, setLoading] = (0, import_react.useState)(true);
+    const [refreshing, setRefreshing] = (0, import_react.useState)(false);
     const [error, setError] = (0, import_react.useState)(null);
-    const load = () => __async(this, null, function* () {
+    const load = (0, import_react.useCallback)(() => __async(this, null, function* () {
       var _a2;
       setError(null);
       try {
@@ -65,11 +66,16 @@
         setError(e.message || "Could not load nutrition data.");
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
-    });
+    }), [bridge]);
+    const onRefresh = (0, import_react.useCallback)(() => {
+      setRefreshing(true);
+      void load();
+    }, [load]);
     (0, import_react.useEffect)(() => {
       void load();
-    }, []);
+    }, [load]);
     const totals = (meals != null ? meals : []).reduce(
       (acc, meal) => {
         for (const item of meal.items) {
@@ -96,66 +102,77 @@
     if (error) {
       return /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.center }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.errorText }, "Could not load nutrition data."));
     }
-    return /* @__PURE__ */ import_react.default.createElement(import_react_native.ScrollView, { style: styles.container, contentContainerStyle: styles.content }, /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.cardsRow }, /* @__PURE__ */ import_react.default.createElement(
-      MacroCard,
+    return /* @__PURE__ */ import_react.default.createElement(
+      import_react_native.ScrollView,
       {
-        value: Math.round(totals.calories),
-        target: (_a = profile == null ? void 0 : profile.calorie_target) != null ? _a : 0,
-        label: "cal",
-        color: "#e0f2fe",
-        textColor: "#0369a1"
-      }
-    ), /* @__PURE__ */ import_react.default.createElement(
-      MacroCard,
-      {
-        value: Math.round(totals.protein),
-        target: (_b = profile == null ? void 0 : profile.protein_g) != null ? _b : 0,
-        label: "protein",
-        unit: "g",
-        color: "#dcfce7",
-        textColor: "#15803d"
-      }
-    ), /* @__PURE__ */ import_react.default.createElement(
-      MacroCard,
-      {
-        value: Math.round(totals.carbs),
-        target: (_c = profile == null ? void 0 : profile.carbs_g) != null ? _c : 0,
-        label: "carbs",
-        unit: "g",
-        color: "#fef3c7",
-        textColor: "#b45309"
-      }
-    ), /* @__PURE__ */ import_react.default.createElement(
-      MacroCard,
-      {
-        value: Math.round(totals.fat),
-        target: (_d = profile == null ? void 0 : profile.fat_g) != null ? _d : 0,
-        label: "fat",
-        unit: "g",
-        color: "#fce7f3",
-        textColor: "#9d174d"
-      }
-    )), !hasTargets ? /* @__PURE__ */ import_react.default.createElement(
-      import_react_native.Pressable,
-      {
-        style: styles.setupBanner,
-        onPress: () => goToChat("Help me figure out my macro targets")
+        style: styles.container,
+        contentContainerStyle: styles.content,
+        refreshControl: /* @__PURE__ */ import_react.default.createElement(import_react_native.RefreshControl, { refreshing, onRefresh })
       },
-      /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.setupBannerText }, "Set your macro targets \u2014 tap to get started.")
-    ) : /* @__PURE__ */ import_react.default.createElement(import_react_native.Pressable, { onPress: () => goToChat("I want to update my macro targets") }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.manageLink }, "Manage targets")), meals != null && meals.length === 0 ? /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.emptyText }, "No meals logged yet.") : meals == null ? void 0 : meals.map((meal) => {
-      const cal = Math.round(meal.items.reduce((s, i) => s + i.calories, 0));
-      const protein = Math.round(
-        meal.items.reduce((s, i) => s + i.protein_g, 0)
-      );
-      return /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { key: meal.id, style: styles.mealRow }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.mealName, numberOfLines: 1 }, meal.raw_input), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.mealMeta }, cal, " cal \xB7 ", protein, "g protein"));
-    }), /* @__PURE__ */ import_react.default.createElement(
-      import_react_native.Pressable,
-      {
-        style: styles.logBtn,
-        onPress: () => goToChat("Log meal: ")
-      },
-      /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.logBtnText }, "+ Log a meal")
-    ));
+      /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { style: styles.cardsRow }, /* @__PURE__ */ import_react.default.createElement(
+        MacroCard,
+        {
+          value: Math.round(totals.calories),
+          target: (_a = profile == null ? void 0 : profile.calorie_target) != null ? _a : 0,
+          label: "cal",
+          color: "#e0f2fe",
+          textColor: "#0369a1"
+        }
+      ), /* @__PURE__ */ import_react.default.createElement(
+        MacroCard,
+        {
+          value: Math.round(totals.protein),
+          target: (_b = profile == null ? void 0 : profile.protein_g) != null ? _b : 0,
+          label: "protein",
+          unit: "g",
+          color: "#dcfce7",
+          textColor: "#15803d"
+        }
+      ), /* @__PURE__ */ import_react.default.createElement(
+        MacroCard,
+        {
+          value: Math.round(totals.carbs),
+          target: (_c = profile == null ? void 0 : profile.carbs_g) != null ? _c : 0,
+          label: "carbs",
+          unit: "g",
+          color: "#fef3c7",
+          textColor: "#b45309"
+        }
+      ), /* @__PURE__ */ import_react.default.createElement(
+        MacroCard,
+        {
+          value: Math.round(totals.fat),
+          target: (_d = profile == null ? void 0 : profile.fat_g) != null ? _d : 0,
+          label: "fat",
+          unit: "g",
+          color: "#fce7f3",
+          textColor: "#9d174d"
+        }
+      )),
+      !hasTargets ? /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.Pressable,
+        {
+          style: styles.setupBanner,
+          onPress: () => goToChat("Help me figure out my macro targets")
+        },
+        /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.setupBannerText }, "Set your macro targets \u2014 tap to get started.")
+      ) : /* @__PURE__ */ import_react.default.createElement(import_react_native.Pressable, { onPress: () => goToChat("I want to update my macro targets") }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.manageLink }, "Manage targets")),
+      meals != null && meals.length === 0 ? /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.emptyText }, "No meals logged yet.") : meals == null ? void 0 : meals.map((meal) => {
+        const cal = Math.round(meal.items.reduce((s, i) => s + i.calories, 0));
+        const protein = Math.round(
+          meal.items.reduce((s, i) => s + i.protein_g, 0)
+        );
+        return /* @__PURE__ */ import_react.default.createElement(import_react_native.View, { key: meal.id, style: styles.mealRow }, /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.mealName, numberOfLines: 1 }, meal.raw_input), /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.mealMeta }, cal, " cal \xB7 ", protein, "g protein"));
+      }),
+      /* @__PURE__ */ import_react.default.createElement(
+        import_react_native.Pressable,
+        {
+          style: styles.logBtn,
+          onPress: () => goToChat("Log meal: ")
+        },
+        /* @__PURE__ */ import_react.default.createElement(import_react_native.Text, { style: styles.logBtnText }, "+ Log a meal")
+      )
+    );
   }
   function MacroCard({
     value,

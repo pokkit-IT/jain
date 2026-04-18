@@ -45,10 +45,15 @@ export function makeBridgeForPlugin(
       }
     },
     navigateToChat(prefill) {
+      if (!navigate) {
+        // Navigation not available in this context (e.g., modal overlay).
+        // Don't write prefill that will never be consumed.
+        return;
+      }
       if (prefill) {
         useAppStore.getState().setPendingChatPrefill(prefill);
       }
-      navigate?.("Jain");
+      navigate("Jain");
     },
   };
 }

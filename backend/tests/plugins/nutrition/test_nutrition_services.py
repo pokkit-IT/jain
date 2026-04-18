@@ -266,6 +266,46 @@ async def test_log_meal_increments_existing_day_summary(session_and_user, monkey
     assert round(d2.total_protein_g, 2) == 30.0
 
 
+async def test_log_meal_propagates_brand_context_to_unbranded_items(session_and_user, monkeypatch):
+    """Brand from first item (e.g. mcdonald's) is prepended to subsequent unbranded items."""
+    session, user = session_and_user
+    resolved_names: list[str] = []
+
+    async def _capture_resolve(name, _db):
+        resolved_names.append(name)
+        return FoodMacros(
+            name=name, calories_per_100g=100, protein_per_100g=10,
+            carbs_per_100g=5, fiber_per_100g=1, fat_per_100g=3,
+            source="usda",
+        )
+    monkeypatch.setattr(nutrition_services, "resolve_food", _capture_resolve)
+
+    await log_meal_for_user(session, user, "McDonald's biscuit, sausage patty, scrambled eggs")
+
+    assert resolved_names[0] == "mcdonald's biscuit"
+    assert resolved_names[1] == "mcdonald's sausage patty"
+    assert resolved_names[2] == "mcdonald's scrambled egg"
+
+
+async def test_log_meal_no_brand_propagation_without_branded_item(session_and_user, monkeypatch):
+    """No brand context when no item has a possessive brand name."""
+    session, user = session_and_user
+    resolved_names: list[str] = []
+
+    async def _capture_resolve(name, _db):
+        resolved_names.append(name)
+        return FoodMacros(
+            name=name, calories_per_100g=100, protein_per_100g=10,
+            carbs_per_100g=5, fiber_per_100g=1, fat_per_100g=3,
+            source="usda",
+        )
+    monkeypatch.setattr(nutrition_services, "resolve_food", _capture_resolve)
+
+    await log_meal_for_user(session, user, "sausage patty, scrambled eggs, biscuit")
+
+    assert resolved_names == ["sausage patty", "scrambled egg", "biscuit"]
+
+
 async def test_log_meal_empty_parse_still_creates_meal(session_and_user, monkeypatch):
     session, user = session_and_user
     async def _no_resolve(*a, **k):

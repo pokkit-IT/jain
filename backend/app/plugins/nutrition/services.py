@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .schemas import FoodMacros, ItemMacros, ParsedItem
 
 _SPLIT_PATTERN = re.compile(r"\s*(?:,|\band\b|\bwith\b|\bplus\b|\+)\s*", re.IGNORECASE)
+_BRAND_PREFIX_RE = re.compile(r"^(\w+'\s*s)\b")
 _LABEL_PATTERN = re.compile(
     r"^\s*(?:breakfast|lunch|dinner|snack|meal)\s*[:\-]\s*", re.IGNORECASE,
 )
@@ -280,9 +281,24 @@ async def log_meal_for_user(
     Commits on success; caller does NOT need to commit again.
     """
     parsed = parse_meal_text(raw_input)
+
+    # Carry brand context (e.g. "mcdonald's") from the first branded item to
+    # all subsequent unbranded items in the same meal, so the user only needs
+    # to write "McDonald's biscuit, sausage patty, eggs" rather than prefixing
+    # every item.
+    brand_ctx: str | None = None
+    for p in parsed:
+        m = _BRAND_PREFIX_RE.match(p.name)
+        if m:
+            brand_ctx = m.group(1)
+            break
+
     resolved: list[ItemMacros] = []
     for p in parsed:
-        food = await resolve_food(p.name, db)
+        name = p.name
+        if brand_ctx and not _BRAND_PREFIX_RE.match(name):
+            name = f"{brand_ctx} {name}"
+        food = await resolve_food(name, db)
         resolved.append(calculate_macros(food, p.quantity, p.unit))
 
     now = logged_at or _datetime.now(_timezone.utc)

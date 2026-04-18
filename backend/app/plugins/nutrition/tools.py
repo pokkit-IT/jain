@@ -101,9 +101,13 @@ TOOLS: list[ToolDef] = [
     ToolDef(
         name="log_meal",
         description=(
-            "Log a meal conversationally. Use when the user describes "
-            "eating something or lists food they consumed. Pass raw_input "
-            "exactly as the user said it — the backend parses it."
+            "Log a meal and record it in the user's nutrition history. "
+            "ALWAYS call this tool when the user mentions, describes, or "
+            "lists anything they ate or drank — even casual statements like "
+            "'I had eggs for breakfast' or 'just finished lunch'. "
+            "Do not ask for confirmation first. Pass raw_input exactly as "
+            "the user said it — the backend parses quantities and looks up "
+            "nutrition data automatically."
         ),
         input_schema=ToolInputSchema(
             properties={

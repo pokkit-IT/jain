@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -44,7 +44,7 @@ export function NutritionHome({ bridge }: NutritionHomeProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = async () => {
     setError(null);
     try {
       const [profileRes, mealsRes] = await Promise.all([
@@ -61,16 +61,16 @@ export function NutritionHome({ bridge }: NutritionHomeProps) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [bridge]);
+  };
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = () => {
     setRefreshing(true);
     void load();
-  }, [load]);
+  };
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, []);  // empty deps — intentional one-shot fetch on mount
 
   const totals = (meals ?? []).reduce(
     (acc, meal) => {

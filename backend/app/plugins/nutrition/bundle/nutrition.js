@@ -51,7 +51,7 @@
     const [loading, setLoading] = (0, import_react.useState)(true);
     const [refreshing, setRefreshing] = (0, import_react.useState)(false);
     const [error, setError] = (0, import_react.useState)(null);
-    const load = (0, import_react.useCallback)(() => __async(this, null, function* () {
+    const load = () => __async(this, null, function* () {
       var _a2;
       setError(null);
       try {
@@ -68,14 +68,14 @@
         setLoading(false);
         setRefreshing(false);
       }
-    }), [bridge]);
-    const onRefresh = (0, import_react.useCallback)(() => {
+    });
+    const onRefresh = () => {
       setRefreshing(true);
       void load();
-    }, [load]);
+    };
     (0, import_react.useEffect)(() => {
       void load();
-    }, [load]);
+    }, []);
     const totals = (meals != null ? meals : []).reduce(
       (acc, meal) => {
         for (const item of meal.items) {

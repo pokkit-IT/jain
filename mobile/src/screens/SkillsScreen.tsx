@@ -8,6 +8,7 @@ import {
 } from "react-native";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
 
 import { PluginHost } from "../plugins/PluginHost";
 import { useAppStore } from "../store/useAppStore";
@@ -22,6 +23,7 @@ interface SelectedSkill {
 export function SkillsScreen() {
   const plugins = useAppStore((s) => s.plugins);
   const [selected, setSelected] = React.useState<SelectedSkill | null>(null);
+  const navigation = useNavigation<any>();
 
   const withHome = plugins.filter(
     (p): p is PluginSummary & { home: NonNullable<PluginSummary["home"]> } =>
@@ -41,6 +43,7 @@ export function SkillsScreen() {
         <PluginHost
           pluginName={selected.pluginName}
           componentName={selected.componentName}
+          navigate={(tab) => navigation.navigate(tab as never)}
         />
       </View>
     );

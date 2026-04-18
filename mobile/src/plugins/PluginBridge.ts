@@ -6,9 +6,14 @@ export interface PluginBridge {
   closeComponent: () => void;
   openComponent: (name: string, props?: Record<string, unknown>) => void;
   showToast: (msg: string) => void;
+  // Navigate to the Chat tab and pre-fill the input. Does NOT auto-send.
+  navigateToChat: (prefill?: string) => void;
 }
 
-export function makeBridgeForPlugin(pluginName: string): PluginBridge {
+export function makeBridgeForPlugin(
+  pluginName: string,
+  navigate?: (tab: string) => void,
+): PluginBridge {
   return {
     async callPluginApi(path, method, body) {
       // Phase 2B: route plugin API calls THROUGH JAIN's backend instead
@@ -38,6 +43,17 @@ export function makeBridgeForPlugin(pluginName: string): PluginBridge {
       if (typeof window !== "undefined" && typeof window.alert === "function") {
         window.alert(msg);
       }
+    },
+    navigateToChat(prefill) {
+      if (!navigate) {
+        // Navigation not available in this context (e.g., modal overlay).
+        // Don't write prefill that will never be consumed.
+        return;
+      }
+      if (prefill) {
+        useAppStore.getState().setPendingChatPrefill(prefill);
+      }
+      navigate("Jain");
     },
   };
 }

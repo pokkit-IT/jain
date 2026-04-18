@@ -16,6 +16,16 @@
       "tools": ["get_macro_summary", "set_macro_targets"]
     }
   ],
+  "components": {
+    "bundle": "bundle/nutrition.js",
+    "exports": ["NutritionHome"]
+  },
+  "home": {
+    "component": "NutritionHome",
+    "label": "Nutrition",
+    "icon": "nutrition-outline",
+    "description": "Track your daily macros and meals."
+  },
   "examples": [
     {"prompt": "Breakfast: 2 eggs, toast, peanut butter", "description": "Log a meal"},
     {"prompt": "I just had a protein shake", "description": "Quick meal log"},

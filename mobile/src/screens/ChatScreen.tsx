@@ -63,6 +63,18 @@ export function ChatScreen() {
     }, [send]),
   );
 
+  // Pre-fill the chat input when a plugin navigates here with a prefill string.
+  // Does NOT auto-send — the user types their message and taps Send themselves.
+  useFocusEffect(
+    useCallback(() => {
+      const prefill = useAppStore.getState().pendingChatPrefill;
+      if (!prefill) return;
+      useAppStore.getState().setPendingChatPrefill(null);
+      setInput(prefill);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }, []),
+  );
+
   const onSend = async () => {
     const text = input.trim();
     if (!text) return;

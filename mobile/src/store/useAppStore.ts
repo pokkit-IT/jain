@@ -42,6 +42,11 @@ interface AppState {
   // → ChatScreen focus effect sends it and clears it.
   pendingPrompt: string | null;
   setPendingPrompt: (prompt: string | null) => void;
+
+  // Pre-fills the chat input on next Chat tab focus (does NOT auto-send).
+  // Used by plugin home screens' "Log a meal" / "Manage targets" buttons.
+  pendingChatPrefill: string | null;
+  setPendingChatPrefill: (prefill: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -91,4 +96,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   pendingPrompt: null,
   setPendingPrompt: (pendingPrompt) => set({ pendingPrompt }),
+
+  pendingChatPrefill: null,
+  setPendingChatPrefill: (pendingChatPrefill) => set({ pendingChatPrefill }),
 }));

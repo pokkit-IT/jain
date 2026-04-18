@@ -1,7 +1,8 @@
 """First-party internal nutrition plugin.
 
-Conversational meal logging and macro tracking. Phase 1 = text-only
-(no UI bundle). Models live in `models.py`, business logic in
+Conversational meal logging and macro tracking. LLM tools handle
+natural-language flows; the NutritionHome bundle provides the Skills
+tab home screen. Models live in `models.py`, business logic in
 `services.py`, USDA lookup in `usda.py`, LLM tool definitions in
 `tools.py`, admin/debug HTTP routes in `routes.py`.
 """
@@ -20,4 +21,6 @@ def register() -> PluginRegistration:
         type="internal",
         router=router,
         tools=TOOLS,
+        ui_bundle_path="bundle/nutrition.js",
+        ui_components=["NutritionHome"],
     )

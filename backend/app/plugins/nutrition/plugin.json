@@ -7,7 +7,7 @@
   "skills": [
     {
       "name": "meal-log",
-      "description": "Log a meal conversationally. Use when user describes eating something, mentions a meal, or says what they had.",
+      "description": "Log meals. Call immediately whenever the user mentions eating or drinking anything, even casually.",
       "tools": ["log_meal"]
     },
     {

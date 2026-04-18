@@ -7,11 +7,17 @@ import type { WithBridge } from "./bridge";
 
 type EventType = "activity" | "note" | "medical" | "school" | "phone_call" | "missed_visit" | "pickup" | "dropoff";
 
-interface EventFormProps extends WithBridge {
+// Props are received via PluginOverlay's { initialData: ... } wrapping,
+// matching the convention used by SaleForm and other overlay-opened forms.
+interface EventFormInitialData {
   childId?: string;
   type?: EventType;
   eventId?: string;
   mode?: "create" | "edit";
+}
+
+interface EventFormProps extends WithBridge {
+  initialData?: EventFormInitialData;
 }
 
 interface EventRow {
@@ -21,7 +27,8 @@ interface EventRow {
   overnight?: boolean; call_connected?: boolean | null;
 }
 
-export function EventForm({ bridge, childId, type = "note", eventId, mode = "create" }: EventFormProps) {
+export function EventForm({ bridge, initialData }: EventFormProps) {
+  const { childId, type = "note", eventId, mode = "create" } = initialData ?? {};
   const [effectiveType, setEffectiveType] = useState<EventType>(type);
   const [occurredAt, setOccurredAt] = useState<string>(() => new Date().toISOString());
   const [notes, setNotes] = useState("");

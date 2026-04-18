@@ -78,9 +78,10 @@ interface PluginHostProps {
   pluginName: string;
   componentName: string;
   props?: Record<string, unknown>;
+  navigate?: (tab: string) => void;
 }
 
-export function PluginHost({ pluginName, componentName, props }: PluginHostProps) {
+export function PluginHost({ pluginName, componentName, props, navigate }: PluginHostProps) {
   const plugin = useAppStore((s) => s.plugins.find((p) => p.name === pluginName));
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +123,7 @@ export function PluginHost({ pluginName, componentName, props }: PluginHostProps
     );
   }
 
-  const bridge = makeBridgeForPlugin(pluginName);
+  const bridge = makeBridgeForPlugin(pluginName, navigate);
   return <Component {...(props ?? {})} bridge={bridge} />;
 }
 

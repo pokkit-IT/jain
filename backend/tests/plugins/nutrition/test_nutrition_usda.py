@@ -1,4 +1,5 @@
 import httpx
+import pytest
 
 from app.plugins.nutrition import usda
 from app.plugins.nutrition.schemas import FoodMacros
@@ -84,6 +85,52 @@ async def test_fetch_usda_food_normalises_branded_food_to_per_100g(monkeypatch):
     assert result.carbs_per_100g == 19.0
     assert result.fat_per_100g == 16.0
     assert result.fiber_per_100g == 1.0
+
+
+@pytest.mark.parametrize("name,expected", [
+    ("mcdonald's biscuit", True),
+    ("wendy's frosty", True),
+    ("arby's roast beef", True),
+    ("sausage patty", False),
+    ("scrambled eggs", False),
+    ("chicken breast", False),
+])
+def test_looks_branded(name, expected):
+    assert usda._looks_branded(name) is expected
+
+
+async def test_fetch_usda_food_sends_datatype_filter_for_branded(monkeypatch):
+    """When the name contains a brand possessive, the USDA request includes dataType=Branded Food."""
+    captured: list[httpx.Request] = []
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(200, json=USDA_RESPONSE_BRANDED)
+
+    monkeypatch.setattr(
+        usda, "_build_client",
+        lambda: httpx.AsyncClient(transport=httpx.MockTransport(_handler)),
+    )
+    await usda.fetch_usda_food("mcdonald's biscuit")
+    assert len(captured) == 1
+    assert "Branded+Food" in str(captured[0].url) or "Branded Food" in str(captured[0].url)
+
+
+async def test_fetch_usda_food_no_datatype_filter_for_generic(monkeypatch):
+    """Generic food names do not get a dataType filter."""
+    captured: list[httpx.Request] = []
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(200, json=USDA_RESPONSE_OK)
+
+    monkeypatch.setattr(
+        usda, "_build_client",
+        lambda: httpx.AsyncClient(transport=httpx.MockTransport(_handler)),
+    )
+    await usda.fetch_usda_food("sausage patty")
+    assert len(captured) == 1
+    assert "dataType" not in str(captured[0].url)
 
 
 async def test_fetch_usda_food_returns_none_on_empty(monkeypatch):

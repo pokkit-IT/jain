@@ -8,6 +8,7 @@ poking at httpx globals.
 from __future__ import annotations
 
 import logging
+import re
 
 import httpx
 
@@ -18,6 +19,15 @@ _log = logging.getLogger("jain.plugins.nutrition.usda")
 USDA_BASE = "https://api.nal.usda.gov/fdc/v1/foods/search"
 USDA_API_KEY = "DEMO_KEY"
 _TIMEOUT = httpx.Timeout(5.0, connect=3.0)
+
+# Matches a possessive form like "mcdonald's", "wendy's", "arby's".
+# The meal parser lowercases all names, so we only need case-insensitive ASCII.
+_POSSESSIVE_RE = re.compile(r"\b\w+'\s*s\b")
+
+
+def _looks_branded(name: str) -> bool:
+    """Return True when the food name contains a brand possessive (word's)."""
+    return bool(_POSSESSIVE_RE.search(name))
 
 
 _NUTRIENT_MAP = {
@@ -43,11 +53,14 @@ async def fetch_usda_food(name: str) -> FoodMacros | None:
     if not name or not name.strip():
         return None
 
-    params = {
+    params: dict[str, object] = {
         "query": name.strip(),
         "pageSize": 1,
         "api_key": USDA_API_KEY,
     }
+    if _looks_branded(name):
+        # Steer USDA toward Branded Food records when the query names a brand.
+        params["dataType"] = "Branded Food"
 
     try:
         async with _build_client() as client:

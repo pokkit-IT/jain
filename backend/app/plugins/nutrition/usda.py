@@ -95,6 +95,15 @@ async def fetch_usda_food(name: str) -> FoodMacros | None:
     except (TypeError, ValueError):
         serving_size_g = None
 
+    # Branded-food records in the USDA FDC search API report nutrient values
+    # per serving, not per 100 g.  Normalise to per-100g so that
+    # calculate_macros() can scale correctly without double-counting.
+    data_type = hit.get("dataType", "")
+    if "branded" in data_type.lower() and serving_size_g and serving_size_g > 0:
+        scale = 100.0 / serving_size_g
+        for key in macros:
+            macros[key] = macros[key] * scale
+
     return FoodMacros(
         name=hit.get("description") or name,
         calories_per_100g=macros["calories_per_100g"],

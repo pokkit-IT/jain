@@ -22,6 +22,26 @@ USDA_RESPONSE_OK = {
     ]
 }
 
+USDA_RESPONSE_BRANDED = {
+    "foods": [
+        {
+            "fdcId": 2345678,
+            "description": "MCDONALD'S, Sausage Biscuit with Egg",
+            "dataType": "Branded Food",
+            "servingSize": 200,
+            "servingSizeUnit": "g",
+            "foodNutrients": [
+                # Values are per serving (200 g), not per 100 g.
+                {"nutrientName": "Energy", "unitName": "KCAL", "value": 500.0},
+                {"nutrientName": "Protein", "unitName": "G", "value": 18.0},
+                {"nutrientName": "Carbohydrate, by difference", "unitName": "G", "value": 38.0},
+                {"nutrientName": "Total lipid (fat)", "unitName": "G", "value": 32.0},
+                {"nutrientName": "Fiber, total dietary", "unitName": "G", "value": 2.0},
+            ],
+        }
+    ]
+}
+
 USDA_RESPONSE_EMPTY = {"foods": []}
 
 
@@ -47,6 +67,23 @@ async def test_fetch_usda_food_parses_nutrients(monkeypatch):
     assert result.usda_fdc_id == "171287"
     assert result.serving_size_g == 50.0
     assert result.source == "usda"
+
+
+async def test_fetch_usda_food_normalises_branded_food_to_per_100g(monkeypatch):
+    """Branded foods report nutrients per serving; we must divide by servingSize/100."""
+    monkeypatch.setattr(
+        usda, "_build_client",
+        lambda: httpx.AsyncClient(transport=_mock_transport(USDA_RESPONSE_BRANDED)),
+    )
+    result = await usda.fetch_usda_food("mcdonald's sausage biscuit with egg")
+    assert isinstance(result, FoodMacros)
+    assert result.serving_size_g == 200.0
+    # 500 kcal per 200 g serving → 250 kcal per 100 g
+    assert result.calories_per_100g == 250.0
+    assert result.protein_per_100g == 9.0
+    assert result.carbs_per_100g == 19.0
+    assert result.fat_per_100g == 16.0
+    assert result.fiber_per_100g == 1.0
 
 
 async def test_fetch_usda_food_returns_none_on_empty(monkeypatch):

@@ -20,4 +20,6 @@ def register() -> PluginRegistration:
         type="internal",
         router=router,
         tools=TOOLS,
+        ui_bundle_path="bundle/nutrition.js",
+        ui_components=["NutritionHome"],
     )

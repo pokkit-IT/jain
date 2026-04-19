@@ -11,6 +11,12 @@ backend/app/plugins/yardsailing/node_modules/
 backend/app/plugins/yardsailing/package-lock.json
 backend/app/plugins/custody/node_modules/
 backend/app/plugins/custody/package-lock.json
+backend/app/plugins/_custody/node_modules/
+backend/app/plugins/_custody/package-lock.json
+backend/app/plugins/nutrition/node_modules/
+backend/app/plugins/nutrition/package-lock.json
+backend/app/plugins/_nutrition/node_modules/
+backend/app/plugins/_nutrition/package-lock.json
 
 # Sale photo uploads (keep .gitkeep sentinel, ignore actual uploads)
 backend/uploads/*

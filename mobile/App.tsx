@@ -86,7 +86,11 @@ export default function App() {
           }}
         >
           <Tab.Screen name="Jain" component={ChatScreen} />
-          {hasMapPlugin ? <Tab.Screen name="Map" component={MapScreen} /> : null}
+          <Tab.Screen
+            name="Map"
+            component={MapScreen}
+            options={hasMapPlugin ? undefined : { tabBarButton: () => null }}
+          />
           <Tab.Screen name="Skills" component={SkillsScreen} />
           <Tab.Screen name="Help" component={HelpScreen} />
           <Tab.Screen name="Settings" component={SettingsScreen} />

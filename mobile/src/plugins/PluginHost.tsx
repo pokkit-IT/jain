@@ -99,6 +99,14 @@ export function PluginHost({ pluginName, componentName, props, navigate, bridgeE
       .catch((e) => setError((e as Error).message));
   }, [plugin, pluginName]);
 
+  const bridge = React.useMemo(
+    () => ({
+      ...makeBridgeForPlugin(pluginName, navigate),
+      ...(bridgeExtension ?? {}),
+    }),
+    [pluginName, navigate, bridgeExtension],
+  );
+
   if (error) {
     return (
       <View style={styles.center}>
@@ -125,13 +133,6 @@ export function PluginHost({ pluginName, componentName, props, navigate, bridgeE
     );
   }
 
-  const bridge = React.useMemo(
-    () => ({
-      ...makeBridgeForPlugin(pluginName, navigate),
-      ...(bridgeExtension ?? {}),
-    }),
-    [pluginName, navigate, bridgeExtension],
-  );
   return <Component {...(props ?? {})} bridge={bridge} />;
 }
 

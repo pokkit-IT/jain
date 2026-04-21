@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ChatTurn, LocationState, PluginSummary, Sale, Session } from "../types";
+import { ChatTurn, LocationState, MapMarker, PluginSummary, Sale, Session } from "../types";
 
 interface AppState {
   location: LocationState | null;
@@ -15,6 +15,9 @@ interface AppState {
   // Most recent sales list surfaced by a tool call
   sales: Sale[];
   setSales: (sales: Sale[]) => void;
+
+  mapMarkers: MapMarker[];
+  setMapMarkers: (markers: MapMarker[]) => void;
 
   // Component the chat screen should show inline (e.g., "yardsailing:SaleForm")
   activeComponent: { plugin: string; name: string; props?: unknown } | null;
@@ -75,6 +78,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   sales: [],
   setSales: (sales) => set({ sales }),
+
+  mapMarkers: [],
+  setMapMarkers: (mapMarkers) => set({ mapMarkers }),
 
   activeComponent: null,
   showComponent: (plugin, name, props) =>

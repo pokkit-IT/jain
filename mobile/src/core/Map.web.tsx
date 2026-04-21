@@ -10,7 +10,7 @@ export interface MapProps {
   onLongPress?: (coord: { lat: number; lng: number }) => void;
 }
 
-export function Map({ region, markers, onMarkerPress }: MapProps) {
+export function Map({ region, markers, onMarkerPress, onLongPress: _onLongPress }: MapProps) {
   return (
     <View style={styles.container}>
       <View style={styles.banner}>

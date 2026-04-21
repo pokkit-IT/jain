@@ -11,7 +11,12 @@ export interface MapProps {
   onLongPress?: (coord: { lat: number; lng: number }) => void;
 }
 
-export function Map({ region, markers, onMarkerPress, onLongPress }: MapProps) {
+export const Map = React.memo(function Map({ region, markers, onMarkerPress, onLongPress }: MapProps) {
+  const handleLongPress = React.useCallback((e: LongPressEvent) => {
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    onLongPress?.({ lat: latitude, lng: longitude });
+  }, [onLongPress]);
+
   if (!region) {
     return (
       <View style={[styles.container, styles.empty]}>
@@ -19,11 +24,6 @@ export function Map({ region, markers, onMarkerPress, onLongPress }: MapProps) {
       </View>
     );
   }
-
-  const handleLongPress = (e: LongPressEvent) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    onLongPress?.({ lat: latitude, lng: longitude });
-  };
 
   return (
     <MapView
@@ -43,7 +43,7 @@ export function Map({ region, markers, onMarkerPress, onLongPress }: MapProps) {
       ))}
     </MapView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

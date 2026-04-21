@@ -3,7 +3,6 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { apiClient } from "../api/client";
 import { useAppStore } from "../store/useAppStore";
-// TODO: MapBridgeExtension should be exported from PluginBridge after Task 6
 import { makeBridgeForPlugin } from "./PluginBridge";
 import type { MapBridgeExtension } from "./PluginBridge";
 
@@ -126,10 +125,13 @@ export function PluginHost({ pluginName, componentName, props, navigate, bridgeE
     );
   }
 
-  const bridge = {
-    ...makeBridgeForPlugin(pluginName, navigate),
-    ...(bridgeExtension ?? {}),
-  };
+  const bridge = React.useMemo(
+    () => ({
+      ...makeBridgeForPlugin(pluginName, navigate),
+      ...(bridgeExtension ?? {}),
+    }),
+    [pluginName, navigate, bridgeExtension],
+  );
   return <Component {...(props ?? {})} bridge={bridge} />;
 }
 

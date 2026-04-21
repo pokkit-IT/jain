@@ -31,11 +31,22 @@ export interface PluginSummary {
   components?: { bundle: string; exports: string[] };
   api?: { base_url: string };
   home?: PluginHome | null;
+  map?: { component: string } | null;
 }
 
 export interface LocationState {
   lat: number;
   lng: number;
+}
+
+export interface MapMarker {
+  id: string;
+  lat: number;
+  lng: number;
+  color?: string;
+  title?: string;
+  description?: string;
+  data?: unknown;
 }
 
 export interface DayHours {

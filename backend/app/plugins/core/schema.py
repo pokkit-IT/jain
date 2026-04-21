@@ -64,6 +64,10 @@ class PluginHome(BaseModel):
     description: str | None = None  # one-line pitch; falls back to manifest.description
 
 
+class MapConfig(BaseModel):
+    component: str  # exported React component name rendered as map overlay
+
+
 class HelpExample(BaseModel):
     prompt: str  # tappable text sent to chat when the user picks it
     description: str = ""  # optional one-liner explaining what it does
@@ -81,3 +85,4 @@ class PluginManifest(BaseModel):
     assets: list[str] = Field(default_factory=list)
     examples: list[HelpExample] = Field(default_factory=list)
     home: PluginHome | None = None
+    map: MapConfig | None = None

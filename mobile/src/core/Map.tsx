@@ -2,24 +2,21 @@ import React from "react";
 import { StyleSheet, View, Text } from "react-native";
 import MapView, { LongPressEvent, Marker, Region } from "react-native-maps";
 
-import { Sale } from "../types";
+import type { MapMarker } from "../types";
 
 export interface MapProps {
   region?: Region;
-  sales: Sale[];
-  onPinPress?: (sale: Sale) => void;
-  onSightingPress?: (sale: Sale) => void;
+  markers: MapMarker[];
+  onMarkerPress?: (marker: MapMarker) => void;
   onLongPress?: (coord: { lat: number; lng: number }) => void;
 }
 
-function pinColor(sale: Sale): string {
-  if (sale.source !== "sighting") return "#2563eb"; // blue
-  return (sale.confirmations ?? 1) >= 2 ? "#16a34a" : "#f59e0b"; // green / orange
-}
+export const Map = React.memo(function Map({ region, markers, onMarkerPress, onLongPress }: MapProps) {
+  const handleLongPress = React.useCallback((e: LongPressEvent) => {
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    onLongPress?.({ lat: latitude, lng: longitude });
+  }, [onLongPress]);
 
-export function Map({
-  region, sales, onPinPress, onSightingPress, onLongPress,
-}: MapProps) {
   if (!region) {
     return (
       <View style={[styles.container, styles.empty]}>
@@ -28,36 +25,25 @@ export function Map({
     );
   }
 
-  const handleLongPress = (e: LongPressEvent) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    onLongPress?.({ lat: latitude, lng: longitude });
-  };
-
   return (
     <MapView
       style={styles.container}
       initialRegion={region}
       onLongPress={handleLongPress}
     >
-      {sales
-        .filter((s): s is Sale & { lat: number; lng: number } => s.lat != null && s.lng != null)
-        .map((sale) => (
-          <Marker
-            key={sale.id}
-            coordinate={{ latitude: sale.lat, longitude: sale.lng }}
-            title={sale.title}
-            description={sale.address}
-            pinColor={pinColor(sale)}
-            onPress={() =>
-              sale.source === "sighting"
-                ? onSightingPress?.(sale)
-                : onPinPress?.(sale)
-            }
-          />
-        ))}
+      {markers.map((marker) => (
+        <Marker
+          key={marker.id}
+          coordinate={{ latitude: marker.lat, longitude: marker.lng }}
+          title={marker.title}
+          description={marker.description}
+          pinColor={marker.color ?? "#2563eb"}
+          onPress={() => onMarkerPress?.(marker)}
+        />
+      ))}
     </MapView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

@@ -19,7 +19,10 @@
   ],
   "components": {
     "bundle": "bundle/yardsailing.js",
-    "exports": ["SaleForm", "YardsailingHome"]
+    "exports": ["SaleForm", "YardsailingHome", "YardsailingMapLayer"]
+  },
+  "map": {
+    "component": "YardsailingMapLayer"
   },
   "home": {
     "component": "YardsailingHome",

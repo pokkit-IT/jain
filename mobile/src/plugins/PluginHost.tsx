@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { apiClient } from "../api/client";
 import { useAppStore } from "../store/useAppStore";
 import { makeBridgeForPlugin } from "./PluginBridge";
+import type { MapBridgeExtension } from "./PluginBridge";
 
 // Global namespace populated by plugin bundles at load time
 declare const globalThis: {
@@ -79,9 +80,10 @@ interface PluginHostProps {
   componentName: string;
   props?: Record<string, unknown>;
   navigate?: (tab: string) => void;
+  bridgeExtension?: Partial<MapBridgeExtension>;
 }
 
-export function PluginHost({ pluginName, componentName, props, navigate }: PluginHostProps) {
+export function PluginHost({ pluginName, componentName, props, navigate, bridgeExtension }: PluginHostProps) {
   const plugin = useAppStore((s) => s.plugins.find((p) => p.name === pluginName));
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +98,14 @@ export function PluginHost({ pluginName, componentName, props, navigate }: Plugi
       .then(() => setReady(true))
       .catch((e) => setError((e as Error).message));
   }, [plugin, pluginName]);
+
+  const bridge = React.useMemo(
+    () => ({
+      ...makeBridgeForPlugin(pluginName, navigate),
+      ...(bridgeExtension ?? {}),
+    }),
+    [pluginName, navigate, bridgeExtension],
+  );
 
   if (error) {
     return (
@@ -123,7 +133,6 @@ export function PluginHost({ pluginName, componentName, props, navigate }: Plugi
     );
   }
 
-  const bridge = makeBridgeForPlugin(pluginName, navigate);
   return <Component {...(props ?? {})} bridge={bridge} />;
 }
 

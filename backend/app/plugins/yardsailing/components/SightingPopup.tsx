@@ -9,7 +9,15 @@ import {
   View,
 } from "react-native";
 
-import type { Sale } from "../types";
+interface Sale {
+  id: string;
+  address: string;
+  lat?: number | null;
+  lng?: number | null;
+  start_time?: string;
+  end_time?: string;
+  confirmations?: number;
+}
 
 export interface SightingPopupProps {
   sale: Sale | null;
@@ -29,10 +37,11 @@ function directionsUrl(sale: Sale): string {
 export function SightingPopup({ sale, onClose }: SightingPopupProps) {
   if (!sale) return null;
   const confirmed = (sale.confirmations ?? 1) >= 2;
+  const url = directionsUrl(sale);
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.card} onPress={() => { /* swallow */ }}>
+        <Pressable style={styles.card} onPress={() => { /* swallow tap */ }}>
           <View
             style={[
               styles.badge,
@@ -43,18 +52,17 @@ export function SightingPopup({ sale, onClose }: SightingPopupProps) {
               {confirmed ? "Confirmed" : "Unconfirmed"}
             </Text>
           </View>
-          <Text style={styles.coords}>{sale.address}</Text>
+          <Text style={styles.address}>{sale.address}</Text>
           {sale.start_time && sale.end_time ? (
             <Text style={styles.hours}>
               {sale.start_time} – {sale.end_time}
             </Text>
           ) : null}
-          <Pressable
-            style={styles.button}
-            onPress={() => Linking.openURL(directionsUrl(sale))}
-          >
-            <Text style={styles.buttonText}>Get directions</Text>
-          </Pressable>
+          {url ? (
+            <Pressable style={styles.button} onPress={() => Linking.openURL(url)}>
+              <Text style={styles.buttonText}>Get directions</Text>
+            </Pressable>
+          ) : null}
           <Pressable style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeText}>Close</Text>
           </Pressable>
@@ -71,11 +79,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
   },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 20,
-  },
+  card: { backgroundColor: "#fff", borderRadius: 14, padding: 20 },
   badge: {
     alignSelf: "flex-start",
     paddingHorizontal: 10,
@@ -86,7 +90,7 @@ const styles = StyleSheet.create({
   badgeUnconfirmed: { backgroundColor: "#fef3c7" },
   badgeConfirmed: { backgroundColor: "#dcfce7" },
   badgeText: { fontSize: 12, fontWeight: "700", color: "#0f172a" },
-  coords: { fontSize: 15, color: "#0f172a", marginBottom: 4 },
+  address: { fontSize: 15, color: "#0f172a", marginBottom: 4 },
   hours: { fontSize: 13, color: "#475569", marginBottom: 12 },
   button: {
     backgroundColor: "#2563eb",

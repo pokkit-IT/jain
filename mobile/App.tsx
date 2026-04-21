@@ -72,6 +72,10 @@ export default function App() {
   useHydrateSession();
   useHydratePlugins();
 
+  const plugins = useAppStore((s) => s.plugins);
+  const pluginsLoaded = useAppStore((s) => s.pluginsLoaded);
+  const hasMapPlugin = pluginsLoaded && plugins.some((p) => p.map?.component);
+
   return (
     <SafeAreaProvider>
       <NavigationContainer>
@@ -83,7 +87,11 @@ export default function App() {
           }}
         >
           <Tab.Screen name="Jain" component={ChatScreen} />
-          <Tab.Screen name="Map" component={MapScreen} />
+          <Tab.Screen
+            name="Map"
+            component={MapScreen}
+            options={hasMapPlugin ? undefined : { tabBarButton: () => null }}
+          />
           <Tab.Screen name="Skills" component={SkillsScreen} />
           <Tab.Screen name="Help" component={HelpScreen} />
           <Tab.Screen name="Settings" component={SettingsScreen} />

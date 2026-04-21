@@ -73,7 +73,8 @@ export default function App() {
   useHydratePlugins();
 
   const plugins = useAppStore((s) => s.plugins);
-  const hasMapPlugin = plugins.some((p) => p.map?.component);
+  const pluginsLoaded = useAppStore((s) => s.pluginsLoaded);
+  const hasMapPlugin = pluginsLoaded && plugins.some((p) => p.map?.component);
 
   return (
     <SafeAreaProvider>

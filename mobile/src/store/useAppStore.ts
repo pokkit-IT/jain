@@ -6,6 +6,7 @@ interface AppState {
   setLocation: (loc: LocationState) => void;
 
   plugins: PluginSummary[];
+  pluginsLoaded: boolean;
   setPlugins: (plugins: PluginSummary[]) => void;
 
   messages: ChatTurn[];
@@ -57,7 +58,8 @@ export const useAppStore = create<AppState>((set) => ({
   setLocation: (location) => set({ location }),
 
   plugins: [],
-  setPlugins: (plugins) => set({ plugins }),
+  pluginsLoaded: false,
+  setPlugins: (plugins) => set({ plugins, pluginsLoaded: true }),
 
   messages: [
     {

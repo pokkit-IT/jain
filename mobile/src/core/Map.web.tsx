@@ -1,19 +1,16 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View, ScrollView } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { Sale } from "../types";
-
-// Web stub for the native Map component. Renders a simple list of sales
-// instead of an actual map — react-native-maps doesn't support web.
-// On native (iOS/Android), Map.tsx is used instead.
+import type { MapMarker } from "../types";
 
 export interface MapProps {
   region?: { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number };
-  sales: Sale[];
-  onPinPress?: (sale: Sale) => void;
+  markers: MapMarker[];
+  onMarkerPress?: (marker: MapMarker) => void;
+  onLongPress?: (coord: { lat: number; lng: number }) => void;
 }
 
-export function Map({ region, sales, onPinPress }: MapProps) {
+export function Map({ region, markers, onMarkerPress }: MapProps) {
   return (
     <View style={styles.container}>
       <View style={styles.banner}>
@@ -27,18 +24,17 @@ export function Map({ region, sales, onPinPress }: MapProps) {
         ) : null}
       </View>
       <ScrollView style={styles.list}>
-        {sales.length === 0 ? (
+        {markers.length === 0 ? (
           <Text style={styles.empty}>No sales loaded yet. Ask Jain to find some.</Text>
         ) : (
-          sales.map((sale) => (
+          markers.map((marker) => (
             <Pressable
-              key={sale.id}
+              key={marker.id}
               style={styles.item}
-              onPress={() => onPinPress?.(sale)}
+              onPress={() => onMarkerPress?.(marker)}
             >
-              <Text style={styles.title}>{sale.title}</Text>
-              <Text style={styles.address}>{sale.address}</Text>
-              {sale.description ? <Text style={styles.desc}>{sale.description}</Text> : null}
+              <Text style={styles.title}>{marker.title}</Text>
+              <Text style={styles.address}>{marker.description}</Text>
             </Pressable>
           ))
         )}
@@ -69,5 +65,4 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 16, fontWeight: "600" },
   address: { fontSize: 13, color: "#64748b", marginTop: 2 },
-  desc: { fontSize: 14, color: "#374151", marginTop: 6 },
 });

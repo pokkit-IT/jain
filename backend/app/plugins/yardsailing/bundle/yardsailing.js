@@ -899,10 +899,594 @@
     deleteText: { color: "#b91c1c", fontWeight: "600" }
   });
 
+  // components/YardsailingMapLayer.tsx
+  var import_react5 = __toESM(__require("react"), 1);
+  var import_react_native5 = __require("react-native");
+
+  // components/SaleDetailsModal.tsx
+  var import_react3 = __toESM(__require("react"), 1);
+  var import_react_native3 = __require("react-native");
+  function directionsUrl(sale) {
+    if (sale.lat != null && sale.lng != null) {
+      const coords = `${sale.lat},${sale.lng}`;
+      return import_react_native3.Platform.OS === "ios" ? `https://maps.apple.com/?daddr=${coords}` : `https://www.google.com/maps/dir/?api=1&destination=${coords}`;
+    }
+    const q = encodeURIComponent(sale.address);
+    return import_react_native3.Platform.OS === "ios" ? `https://maps.apple.com/?daddr=${q}` : `https://www.google.com/maps/dir/?api=1&destination=${q}`;
+  }
+  var SCREEN_WIDTH = import_react_native3.Dimensions.get("window").width;
+  function SaleDetailsModal({ sale, onClose, bridge }) {
+    var _a, _b;
+    if (!sale) return null;
+    const days = (_a = sale.days) != null ? _a : [];
+    const isMultiDay = days.length > 1;
+    const when = !isMultiDay ? sale.start_date ? sale.end_date && sale.end_date !== sale.start_date ? `${sale.start_date} \u2013 ${sale.end_date}` : sale.start_date : null : null;
+    const hours = !isMultiDay && sale.start_time && sale.end_time ? `${sale.start_time} \u2013 ${sale.end_time}` : null;
+    const photos = (_b = sale.photos) != null ? _b : [];
+    return /* @__PURE__ */ import_react3.default.createElement(
+      import_react_native3.Modal,
+      {
+        visible: sale !== null,
+        transparent: true,
+        animationType: "slide",
+        onRequestClose: onClose
+      },
+      /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Pressable, { style: styles3.backdrop, onPress: onClose }, /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Pressable, { style: styles3.sheet, onPress: () => {
+      } }, /* @__PURE__ */ import_react3.default.createElement(import_react_native3.ScrollView, { contentContainerStyle: styles3.body }, photos.length > 0 ? /* @__PURE__ */ import_react3.default.createElement(
+        import_react_native3.ScrollView,
+        {
+          horizontal: true,
+          pagingEnabled: true,
+          showsHorizontalScrollIndicator: false,
+          style: styles3.carousel
+        },
+        photos.map((p) => /* @__PURE__ */ import_react3.default.createElement(
+          import_react_native3.Image,
+          {
+            key: p.id,
+            source: { uri: bridge.absUrl(p.url) },
+            style: [styles3.carouselImage, { width: SCREEN_WIDTH - 24 }],
+            resizeMode: "cover"
+          }
+        ))
+      ) : null, /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.title }, sale.title), /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.address }, sale.address), when || hours ? /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.meta }, [when, hours].filter(Boolean).join(" \xB7 ")) : null, isMultiDay ? /* @__PURE__ */ import_react3.default.createElement(import_react_native3.View, { style: styles3.schedule }, days.map((d) => /* @__PURE__ */ import_react3.default.createElement(import_react_native3.View, { key: d.day_date, style: styles3.scheduleRow }, /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.scheduleDate }, d.day_date), /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.scheduleHours }, d.start_time, " \u2013 ", d.end_time)))) : null, sale.tags && sale.tags.length > 0 ? /* @__PURE__ */ import_react3.default.createElement(import_react_native3.View, { style: styles3.tagRow }, sale.tags.map((t) => /* @__PURE__ */ import_react3.default.createElement(import_react_native3.View, { key: t, style: styles3.tagChip }, /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.tagText }, t)))) : null, sale.groups && sale.groups.length > 0 ? /* @__PURE__ */ import_react3.default.createElement(import_react_native3.View, { style: styles3.tagRow }, sale.groups.map((g) => /* @__PURE__ */ import_react3.default.createElement(import_react_native3.View, { key: g.id, style: styles3.groupChip }, /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.groupChipText }, g.name)))) : null, sale.description ? /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.desc }, sale.description) : null, /* @__PURE__ */ import_react3.default.createElement(
+        import_react_native3.Pressable,
+        {
+          style: styles3.button,
+          onPress: () => import_react_native3.Linking.openURL(directionsUrl(sale))
+        },
+        /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.buttonText }, "Get directions")
+      ), /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Pressable, { style: styles3.closeBtn, onPress: onClose }, /* @__PURE__ */ import_react3.default.createElement(import_react_native3.Text, { style: styles3.closeText }, "Close")))))
+    );
+  }
+  var styles3 = import_react_native3.StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "flex-end"
+    },
+    sheet: {
+      backgroundColor: "#fff",
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      maxHeight: "70%"
+    },
+    body: { padding: 20 },
+    title: { fontSize: 20, fontWeight: "700", marginBottom: 4 },
+    address: { fontSize: 15, color: "#475569", marginBottom: 8 },
+    meta: { fontSize: 13, color: "#64748b", marginBottom: 12 },
+    desc: { fontSize: 15, color: "#1f2937", marginBottom: 16, lineHeight: 22 },
+    button: {
+      backgroundColor: "#2563eb",
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: "center",
+      marginTop: 8
+    },
+    buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+    closeBtn: { paddingVertical: 14, alignItems: "center", marginTop: 8 },
+    closeText: { color: "#64748b", fontSize: 15 },
+    schedule: {
+      backgroundColor: "#f8fafc",
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: "#e2e8f0",
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      marginBottom: 16
+    },
+    scheduleRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 4
+    },
+    scheduleDate: { fontSize: 14, color: "#334155", fontWeight: "600" },
+    scheduleHours: { fontSize: 14, color: "#475569" },
+    tagRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16 },
+    tagChip: {
+      backgroundColor: "#eff6ff",
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      marginRight: 6,
+      marginBottom: 6,
+      borderWidth: 1,
+      borderColor: "#bfdbfe"
+    },
+    tagText: {
+      fontSize: 12,
+      color: "#1d4ed8",
+      fontWeight: "600",
+      textTransform: "capitalize"
+    },
+    groupChip: {
+      backgroundColor: "#ede9fe",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginRight: 6,
+      marginTop: 4
+    },
+    groupChipText: { fontSize: 12, color: "#6d28d9", fontWeight: "600" },
+    carousel: { height: 240, marginBottom: 12 },
+    carouselImage: { height: 240, borderRadius: 12, marginRight: 8 }
+  });
+
+  // components/SightingPopup.tsx
+  var import_react4 = __toESM(__require("react"), 1);
+  var import_react_native4 = __require("react-native");
+  function directionsUrl2(sale) {
+    if (sale.lat != null && sale.lng != null) {
+      const coords = `${sale.lat},${sale.lng}`;
+      return import_react_native4.Platform.OS === "ios" ? `https://maps.apple.com/?daddr=${coords}` : `https://www.google.com/maps/dir/?api=1&destination=${coords}`;
+    }
+    return "";
+  }
+  function SightingPopup({ sale, onClose }) {
+    var _a;
+    if (!sale) return null;
+    const confirmed = ((_a = sale.confirmations) != null ? _a : 1) >= 2;
+    const url = directionsUrl2(sale);
+    return /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Modal, { visible: true, transparent: true, animationType: "fade", onRequestClose: onClose }, /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Pressable, { style: styles4.backdrop, onPress: onClose }, /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Pressable, { style: styles4.card, onPress: () => {
+    } }, /* @__PURE__ */ import_react4.default.createElement(
+      import_react_native4.View,
+      {
+        style: [
+          styles4.badge,
+          confirmed ? styles4.badgeConfirmed : styles4.badgeUnconfirmed
+        ]
+      },
+      /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Text, { style: styles4.badgeText }, confirmed ? "Confirmed" : "Unconfirmed")
+    ), /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Text, { style: styles4.address }, sale.address), sale.start_time && sale.end_time ? /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Text, { style: styles4.hours }, sale.start_time, " \u2013 ", sale.end_time) : null, url ? /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Pressable, { style: styles4.button, onPress: () => import_react_native4.Linking.openURL(url) }, /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Text, { style: styles4.buttonText }, "Get directions")) : null, /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Pressable, { style: styles4.closeBtn, onPress: onClose }, /* @__PURE__ */ import_react4.default.createElement(import_react_native4.Text, { style: styles4.closeText }, "Close")))));
+  }
+  var styles4 = import_react_native4.StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "center",
+      paddingHorizontal: 24
+    },
+    card: { backgroundColor: "#fff", borderRadius: 14, padding: 20 },
+    badge: {
+      alignSelf: "flex-start",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 10,
+      marginBottom: 10
+    },
+    badgeUnconfirmed: { backgroundColor: "#fef3c7" },
+    badgeConfirmed: { backgroundColor: "#dcfce7" },
+    badgeText: { fontSize: 12, fontWeight: "700", color: "#0f172a" },
+    address: { fontSize: 15, color: "#0f172a", marginBottom: 4 },
+    hours: { fontSize: 13, color: "#475569", marginBottom: 12 },
+    button: {
+      backgroundColor: "#2563eb",
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: "center"
+    },
+    buttonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+    closeBtn: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
+    closeText: { color: "#64748b", fontSize: 14 }
+  });
+
+  // components/YardsailingMapLayer.tsx
+  function pad22(n) {
+    return n < 10 ? `0${n}` : String(n);
+  }
+  function nowHHMM() {
+    const d = /* @__PURE__ */ new Date();
+    return `${pad22(d.getHours())}:${pad22(d.getMinutes())}`;
+  }
+  function toMapMarker(sale) {
+    var _a, _b, _c;
+    let color = "#2563eb";
+    if (sale.source === "sighting") {
+      color = ((_a = sale.confirmations) != null ? _a : 1) >= 2 ? "#16a34a" : "#f59e0b";
+    }
+    return {
+      id: sale.id,
+      lat: (_b = sale.lat) != null ? _b : 0,
+      lng: (_c = sale.lng) != null ? _c : 0,
+      color,
+      title: sale.title,
+      description: sale.address,
+      data: sale
+    };
+  }
+  function Chip({
+    label,
+    active,
+    onPress,
+    accent
+  }) {
+    return /* @__PURE__ */ import_react5.default.createElement(
+      import_react_native5.Pressable,
+      {
+        onPress,
+        style: [
+          styles5.chip,
+          active && (accent ? styles5.chipActiveAccent : styles5.chipActive)
+        ]
+      },
+      /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: [styles5.chipText, active && styles5.chipTextActive] }, label)
+    );
+  }
+  function YardsailingMapLayer({ bridge }) {
+    const [activeTags, setActiveTags] = import_react5.default.useState([]);
+    const [happeningNow, setHappeningNow] = import_react5.default.useState(false);
+    const [activeGroup, setActiveGroup] = import_react5.default.useState(null);
+    const [availableTags, setAvailableTags] = import_react5.default.useState([]);
+    const [availableGroups, setAvailableGroups] = import_react5.default.useState([]);
+    const [groupSheetOpen, setGroupSheetOpen] = import_react5.default.useState(false);
+    const [loading, setLoading] = import_react5.default.useState(false);
+    const [pendingDrop, setPendingDrop] = import_react5.default.useState(null);
+    const [dropping, setDropping] = import_react5.default.useState(false);
+    const [selectedSale, setSelectedSale] = import_react5.default.useState(null);
+    const [selectedSighting, setSelectedSighting] = import_react5.default.useState(null);
+    import_react5.default.useEffect(() => {
+      bridge.callPluginApi("/api/plugins/yardsailing/tags", "GET", null).then((res) => {
+        if (res && typeof res === "object" && "tags" in res) {
+          setAvailableTags(res.tags);
+        }
+      }).catch(() => {
+      });
+      bridge.callPluginApi("/api/plugins/yardsailing/groups", "GET", null).then((res) => {
+        setAvailableGroups(Array.isArray(res) ? res : []);
+      }).catch(() => {
+      });
+    }, [bridge]);
+    const loadSales = import_react5.default.useCallback(() => __async(this, null, function* () {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        activeTags.forEach((t) => params.append("tag", t));
+        if (happeningNow) params.set("happening_now", "1");
+        if (activeGroup) params.set("group_id", activeGroup.id);
+        const qs = params.toString();
+        const path = `/api/plugins/yardsailing/sales/recent${qs ? `?${qs}` : ""}`;
+        const res = yield bridge.callPluginApi(path, "GET", null);
+        const sales = Array.isArray(res) ? res : [];
+        bridge.setMarkers(
+          sales.filter((s) => s.lat != null && s.lng != null).map(toMapMarker)
+        );
+      } catch (e) {
+        bridge.setMarkers([]);
+      } finally {
+        setLoading(false);
+      }
+    }), [bridge, activeTags, happeningNow, activeGroup]);
+    import_react5.default.useEffect(() => {
+      loadSales();
+    }, [loadSales]);
+    import_react5.default.useEffect(() => {
+      const handleLongPress = (coord) => {
+        const hh = parseInt(nowHHMM().slice(0, 2), 10);
+        if (hh >= 17) return;
+        setPendingDrop(coord);
+      };
+      const handleMarkerPress = (marker) => {
+        const data = marker.data;
+        if (!data || typeof data !== "object" || !("id" in data)) return;
+        const sale = data;
+        if (sale.source === "sighting") {
+          setSelectedSighting(sale);
+        } else {
+          setSelectedSale(sale);
+        }
+      };
+      bridge.onLongPress(handleLongPress);
+      bridge.onMarkerPress(handleMarkerPress);
+      return () => {
+        bridge.offLongPress(handleLongPress);
+        bridge.offMarkerPress(handleMarkerPress);
+        bridge.setMarkers([]);
+      };
+    }, [bridge]);
+    const confirmDrop = () => __async(this, null, function* () {
+      if (!pendingDrop) return;
+      setDropping(true);
+      try {
+        yield bridge.callPluginApi("/api/plugins/yardsailing/sightings", "POST", {
+          lat: pendingDrop.lat,
+          lng: pendingDrop.lng,
+          now_hhmm: nowHHMM()
+        });
+        setPendingDrop(null);
+        yield loadSales();
+      } catch (e) {
+        bridge.showToast("Failed to drop pin. Try again.");
+      } finally {
+        setDropping(false);
+      }
+    });
+    const handleDropPinFab = () => {
+      const hh = parseInt(nowHHMM().slice(0, 2), 10);
+      if (hh >= 17) {
+        bridge.showToast("Sale drop closed after 5 PM.");
+        return;
+      }
+      const loc = bridge.getLocation();
+      if (!loc) {
+        bridge.showToast("Location unavailable.");
+        return;
+      }
+      setPendingDrop(loc);
+    };
+    return /* @__PURE__ */ import_react5.default.createElement(import_react_native5.View, { style: styles5.overlay, pointerEvents: "box-none" }, /* @__PURE__ */ import_react5.default.createElement(import_react_native5.View, { style: styles5.filterBar, pointerEvents: "auto" }, /* @__PURE__ */ import_react5.default.createElement(
+      import_react_native5.ScrollView,
+      {
+        horizontal: true,
+        showsHorizontalScrollIndicator: false,
+        contentContainerStyle: styles5.chipRow
+      },
+      /* @__PURE__ */ import_react5.default.createElement(
+        Chip,
+        {
+          label: "Now",
+          active: happeningNow,
+          onPress: () => setHappeningNow((v) => !v),
+          accent: true
+        }
+      ),
+      /* @__PURE__ */ import_react5.default.createElement(
+        Chip,
+        {
+          label: activeGroup ? activeGroup.name : "Groups",
+          active: !!activeGroup,
+          onPress: () => setGroupSheetOpen(true)
+        }
+      ),
+      availableTags.map((tag) => /* @__PURE__ */ import_react5.default.createElement(
+        Chip,
+        {
+          key: tag,
+          label: tag,
+          active: activeTags.includes(tag),
+          onPress: () => setActiveTags(
+            (prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+          )
+        }
+      ))
+    ), activeTags.length > 0 || happeningNow || activeGroup ? /* @__PURE__ */ import_react5.default.createElement(
+      import_react_native5.Pressable,
+      {
+        style: styles5.clearBtn,
+        onPress: () => {
+          setActiveTags([]);
+          setHappeningNow(false);
+          setActiveGroup(null);
+        }
+      },
+      /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: styles5.clearText }, "Clear")
+    ) : null), /* @__PURE__ */ import_react5.default.createElement(
+      import_react_native5.Pressable,
+      {
+        style: [styles5.fab, styles5.fabDrop],
+        onPress: handleDropPinFab,
+        pointerEvents: "auto",
+        accessibilityLabel: "Drop a pin"
+      },
+      /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: styles5.fabText }, "\u{1F4CD}")
+    ), /* @__PURE__ */ import_react5.default.createElement(
+      import_react_native5.Pressable,
+      {
+        style: styles5.fab,
+        onPress: loadSales,
+        disabled: loading,
+        pointerEvents: "auto",
+        accessibilityLabel: "Refresh sales"
+      },
+      loading ? /* @__PURE__ */ import_react5.default.createElement(import_react_native5.ActivityIndicator, { color: "#fff" }) : /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: styles5.fabText }, "\u21BB")
+    ), /* @__PURE__ */ import_react5.default.createElement(
+      SaleDetailsModal,
+      {
+        sale: selectedSale,
+        onClose: () => setSelectedSale(null),
+        bridge
+      }
+    ), /* @__PURE__ */ import_react5.default.createElement(
+      SightingPopup,
+      {
+        sale: selectedSighting,
+        onClose: () => setSelectedSighting(null)
+      }
+    ), /* @__PURE__ */ import_react5.default.createElement(
+      import_react_native5.Modal,
+      {
+        transparent: true,
+        animationType: "fade",
+        visible: pendingDrop !== null,
+        onRequestClose: () => setPendingDrop(null)
+      },
+      /* @__PURE__ */ import_react5.default.createElement(import_react_native5.View, { style: styles5.dropBackdrop }, /* @__PURE__ */ import_react5.default.createElement(
+        import_react_native5.Pressable,
+        {
+          style: import_react_native5.StyleSheet.absoluteFill,
+          onPress: () => !dropping && setPendingDrop(null)
+        }
+      ), /* @__PURE__ */ import_react5.default.createElement(import_react_native5.View, { style: styles5.dropCard }, /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: styles5.dropTitle }, "Drop unconfirmed sale?"), pendingDrop ? /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: styles5.dropCoords }, pendingDrop.lat.toFixed(5), ", ", pendingDrop.lng.toFixed(5)) : null, /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: styles5.dropHint }, "If someone else drops a pin here too, it'll be marked Confirmed."), /* @__PURE__ */ import_react5.default.createElement(
+        import_react_native5.Pressable,
+        {
+          style: [styles5.dropBtn, dropping && { opacity: 0.6 }],
+          disabled: dropping || !pendingDrop,
+          onPress: confirmDrop
+        },
+        /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: styles5.dropBtnText }, dropping ? "Dropping\u2026" : "Drop pin")
+      ), /* @__PURE__ */ import_react5.default.createElement(
+        import_react_native5.Pressable,
+        {
+          style: styles5.dropCancel,
+          onPress: () => !dropping && setPendingDrop(null)
+        },
+        /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: styles5.dropCancelText }, "Cancel")
+      )))
+    ), /* @__PURE__ */ import_react5.default.createElement(
+      import_react_native5.Modal,
+      {
+        transparent: true,
+        animationType: "slide",
+        visible: groupSheetOpen,
+        onRequestClose: () => setGroupSheetOpen(false)
+      },
+      /* @__PURE__ */ import_react5.default.createElement(import_react_native5.View, { style: styles5.groupBackdrop }, /* @__PURE__ */ import_react5.default.createElement(
+        import_react_native5.Pressable,
+        {
+          style: import_react_native5.StyleSheet.absoluteFill,
+          onPress: () => setGroupSheetOpen(false)
+        }
+      ), /* @__PURE__ */ import_react5.default.createElement(import_react_native5.View, { style: styles5.groupSheet }, /* @__PURE__ */ import_react5.default.createElement(import_react_native5.Text, { style: styles5.groupTitle }, "Filter by Group"), /* @__PURE__ */ import_react5.default.createElement(
+        import_react_native5.Pressable,
+        {
+          style: styles5.groupRow,
+          onPress: () => {
+            setActiveGroup(null);
+            setGroupSheetOpen(false);
+          }
+        },
+        /* @__PURE__ */ import_react5.default.createElement(
+          import_react_native5.Text,
+          {
+            style: [
+              styles5.groupName,
+              !activeGroup && styles5.groupNameActive
+            ]
+          },
+          "All groups"
+        )
+      ), availableGroups.map((g) => /* @__PURE__ */ import_react5.default.createElement(
+        import_react_native5.Pressable,
+        {
+          key: g.id,
+          style: styles5.groupRow,
+          onPress: () => {
+            setActiveGroup(g);
+            setGroupSheetOpen(false);
+          }
+        },
+        /* @__PURE__ */ import_react5.default.createElement(
+          import_react_native5.Text,
+          {
+            style: [
+              styles5.groupName,
+              (activeGroup == null ? void 0 : activeGroup.id) === g.id && styles5.groupNameActive
+            ]
+          },
+          g.name
+        )
+      ))))
+    ));
+  }
+  var styles5 = import_react_native5.StyleSheet.create({
+    overlay: __spreadValues({}, import_react_native5.StyleSheet.absoluteFillObject),
+    filterBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#fff",
+      borderBottomWidth: 1,
+      borderBottomColor: "#e2e8f0"
+    },
+    chipRow: { paddingHorizontal: 10, paddingVertical: 8, gap: 6 },
+    chip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: "#cbd5e1",
+      backgroundColor: "#f8fafc",
+      marginRight: 6
+    },
+    chipActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
+    chipActiveAccent: { backgroundColor: "#16a34a", borderColor: "#16a34a" },
+    chipText: { fontSize: 13, color: "#334155", fontWeight: "600" },
+    chipTextActive: { color: "#fff" },
+    clearBtn: { paddingHorizontal: 10, paddingVertical: 8 },
+    clearText: { color: "#64748b", fontSize: 13, fontWeight: "600" },
+    fab: {
+      position: "absolute",
+      right: 16,
+      bottom: 24,
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: "#2563eb",
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
+      shadowOpacity: 0.2,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 4
+    },
+    fabDrop: { bottom: 88 },
+    fabText: { color: "#fff", fontSize: 24, lineHeight: 26, fontWeight: "700" },
+    dropBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      paddingHorizontal: 24
+    },
+    dropCard: { backgroundColor: "#fff", borderRadius: 14, padding: 20 },
+    dropTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+    dropCoords: { fontSize: 14, color: "#475569", marginBottom: 8 },
+    dropHint: { fontSize: 13, color: "#64748b", marginBottom: 16 },
+    dropBtn: {
+      backgroundColor: "#f59e0b",
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: "center"
+    },
+    dropBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+    dropCancel: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
+    dropCancelText: { color: "#64748b", fontSize: 14 },
+    groupBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "flex-end"
+    },
+    groupSheet: {
+      backgroundColor: "#fff",
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      padding: 20,
+      paddingBottom: 36
+    },
+    groupTitle: {
+      fontSize: 17,
+      fontWeight: "700",
+      marginBottom: 14,
+      color: "#0f172a"
+    },
+    groupRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f1f5f9" },
+    groupName: { fontSize: 15, color: "#334155" },
+    groupNameActive: { color: "#2563eb", fontWeight: "700" }
+  });
+
   // components/index.ts
   globalThis.JainPlugins = globalThis.JainPlugins || {};
   globalThis.JainPlugins.yardsailing = {
     SaleForm,
-    YardsailingHome
+    YardsailingHome,
+    YardsailingMapLayer
   };
 })();

@@ -1,7 +1,7 @@
-import { mapEventBus } from "../mapEventBus";
+import { mapEventBus, _resetForTests } from "../mapEventBus";
 
 afterEach(() => {
-  // Reset module-level sets between tests by unsubscribing all added callbacks
+  _resetForTests();
 });
 
 describe("mapEventBus", () => {

@@ -27,3 +27,8 @@ export const mapEventBus = {
     markerPressSubscribers.delete(cb);
   },
 };
+
+export function _resetForTests(): void {
+  longPressSubscribers.clear();
+  markerPressSubscribers.clear();
+}

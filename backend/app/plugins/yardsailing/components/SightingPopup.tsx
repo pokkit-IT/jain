@@ -37,6 +37,7 @@ function directionsUrl(sale: Sale): string {
 export function SightingPopup({ sale, onClose }: SightingPopupProps) {
   if (!sale) return null;
   const confirmed = (sale.confirmations ?? 1) >= 2;
+  const url = directionsUrl(sale);
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
@@ -57,12 +58,11 @@ export function SightingPopup({ sale, onClose }: SightingPopupProps) {
               {sale.start_time} – {sale.end_time}
             </Text>
           ) : null}
-          <Pressable
-            style={styles.button}
-            onPress={() => Linking.openURL(directionsUrl(sale))}
-          >
-            <Text style={styles.buttonText}>Get directions</Text>
-          </Pressable>
+          {url ? (
+            <Pressable style={styles.button} onPress={() => Linking.openURL(url)}>
+              <Text style={styles.buttonText}>Get directions</Text>
+            </Pressable>
+          ) : null}
           <Pressable style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeText}>Close</Text>
           </Pressable>

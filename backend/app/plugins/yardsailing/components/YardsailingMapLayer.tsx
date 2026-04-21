@@ -87,6 +87,8 @@ function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
 
+// NOTE: Uses device local time. Assumes the user is in the same timezone
+// as yard sales in their area. For cross-timezone accuracy, use a server-side cutoff.
 function nowHHMM(): string {
   const d = new Date();
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
@@ -139,6 +141,7 @@ function Chip({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export interface YardsailingMapLayerProps {
+  /** bridge must be referentially stable (wrap in useMemo or pass a module-level constant) */
   bridge: MapLayerBridge;
 }
 
@@ -192,7 +195,7 @@ export function YardsailingMapLayer({ bridge }: YardsailingMapLayerProps) {
           .map(toMapMarker),
       );
     } catch {
-      // silent — map shows stale data on error
+      bridge.setMarkers([]); // clear stale markers on fetch error
     } finally {
       setLoading(false);
     }
@@ -211,7 +214,9 @@ export function YardsailingMapLayer({ bridge }: YardsailingMapLayerProps) {
     };
 
     const handleMarkerPress = (marker: MapMarker) => {
-      const sale = marker.data as Sale;
+      const data = marker.data;
+      if (!data || typeof data !== "object" || !("id" in data)) return;
+      const sale = data as Sale;
       if (sale.source === "sighting") {
         setSelectedSighting(sale);
       } else {
